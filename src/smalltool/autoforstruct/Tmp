@@ -1,0 +1,18 @@
+func (t *Tmp) Ab() int{
+return t.ab
+}
+func (t *Tmp) SetTmp(Ab ab){
+%!(EXTRA string=int) t.ab = ab
+}
+func (t *Tmp) Bv() string{
+return t.bv
+}
+func (t *Tmp) SetTmp(Bv bv){
+%!(EXTRA string=string) t.bv = bv
+}
+func (t *Tmp) Ck() interface {}{
+return t.ck
+}
+func (t *Tmp) SetTmp(Ck ck){
+%!(EXTRA string=interface {}) t.ck = ck
+}

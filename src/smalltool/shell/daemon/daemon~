@@ -1,0 +1,26 @@
+#!/bin/sh
+i=0
+    var=$(lsof -p ^1 | grep nohup.out | grep dtsvr| awk '{print $1,$7,$9}'|uniq )
+for v in $var 
+do
+        array[${i}]=$v
+        ((++i))
+done
+b=10
+num=${#array[@]}
+for((j=2;j<num;j+=3)){
+     sizef=$(ls -l --block-size=M ${array[$j]} | awk '{print $5}')
+     echo $sizef
+     echo ${array[$j-1]}
+     if [ ${array[$j-1]} -gt $b ]
+     then    
+        echo ${array[$j]}
+     fi
+}
+
+filesize=$(lsof -p ^1 | grep nohup.out | grep dtsvr| awk '{print $7}'|uniq )
+for s in $filesize
+do
+    echo $s
+done
+
