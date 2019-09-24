@@ -6,7 +6,9 @@
 // 内存分配器
 // This was originally based on tcmalloc, but has diverged quite a bit.
 // http://goog-perftools.sourceforge.net/doc/tcmalloc.html
-
+//
+// 内存管理单元和objects的关系，内存管理器会将内存分成大约70个类，每个类都有一组相同大小的对象，
+// 每个页都可以分成一个大小类的对象集使用空闲位图（bitmap）管理器
 // The main allocator works in runs of pages.
 // Small allocation sizes (up to and including 32 kB) are
 // rounded to one of about 70 size classes, each of which
@@ -14,41 +16,50 @@
 // Any free page of memory can be split into a set of objects
 // of one size class, which are then managed using a free bitmap.
 //
+// 分配器的数据结构
 // The allocator's data structures are:
 //
-//	fixalloc: a free-list allocator for fixed-size off-heap objects,
-//		used to manage storage used by the allocator.
+//	fixalloc:
+// 一个固定大小的heap对象的空闲分配器，用来管理分配器的存储
+// a free-list allocator for fixed-size off-heap objects, used to manage storage used by the allocator.
+//  堆分配器，管理的粒度是8192byte
 //	mheap: the malloc heap, managed at page (8192-byte) granularity.
+//  有mheap管理的一系列页面
 //	mspan: a run of pages managed by the mheap.
+//	所有给定大小的spans的集合，可以将mcentral理解成一个spans的管理池
 //	mcentral: collects all spans of a given size class.
+//	每个p上的缓存
 //	mcache: a per-P cache of mspans with free space.
+//  分配器的统计信息
 //	mstats: allocation statistics.
-//
+
+//	在go中有三个内存分配层级即大中小
+// 分配一个小对象的时候会进入缓存结构
 // Allocating a small object proceeds up a hierarchy of caches:
 //
+//  下面的意思是如果可以在当前的空闲位图中找到span就直接分配并且该过程不需要加锁
 //	1. Round the size up to one of the small size classes
-//	   and look in the corresponding mspan in this P's mcache.
-//	   Scan the mspan's free bitmap to find a free slot.
-//	   If there is a free slot, allocate it.
-//	   This can all be done without acquiring a lock.
+//	   and look in(查找) the corresponding(相应) mspan in this P's mcache.
+//	   Scan(扫描) the mspan's free bitmap to find a free slot(位置).
+//	   If there is a free slot, allocate(分配) it.
+//	   This can all be done without acquiring a lock.这些操作多可以在不获得锁
 //
+//  如果第一步如果没有则向mcentral中申请一个mspans列表
 //	2. If the mspan has no free slots, obtain a new mspan
-//	   from the mcentral's list of mspans of the required size
-//	   class that have free space.
-//	   Obtaining a whole span amortizes the cost of locking
-//	   the mcentral.
-//
+//	   from the mcentral's list of mspans of the required size class that have free space.
+//	   Obtaining a whole span amortizes the cost of locking the mcentral. 这个操作是需要加锁的
+//	如果第二步还是没有获取到就从mheap中获取
 //	3. If the mcentral's mspan list is empty, obtain a run
 //	   of pages from the mheap to use for the mspan.
 //
+//	如果mheap中没有获取到就向操作系统申请，不少于1MB. 一次性拿出一个大的内存可以减少和操作系统交互的成本
 //	4. If the mheap is empty or has no page runs large enough,
-//	   allocate a new group of pages (at least 1MB) from the
-//	   operating system. Allocating a large run of pages
-//	   amortizes the cost of talking to the operating system.
+//	   allocate a new group of pages (at least 1MB) from the operating system.
+// 	   Allocating a large run of pages amortizes the cost of talking to the operating system.
 //
-// Sweeping an mspan and freeing objects on it proceeds up a similar
-// hierarchy:
-//
+// 扫描mspan并释放objects是一个类似的层级
+// Sweeping an mspan and freeing objects on it proceeds up a similar hierarchy:
+//	下面介绍的就是：如果在释放的过程中本层的的空闲过多的时候会将一部分归还给上层保证整体内存占用的平衡
 //	1. If the mspan is being swept in response to allocation, it
 //	   is returned to the mcache to satisfy the allocation.
 //
@@ -64,12 +75,14 @@
 //	4. If an mspan remains idle for long enough, return its pages
 //	   to the operating system.
 //
+// 分配一个大的对象的时候会直接在mheap上分配
 // Allocating and freeing a large object uses the mheap
-// directly, bypassing the mcache and mcentral.
+// directly, bypassing(绕过) the mcache and mcentral.
 //
-// Free object slots in an mspan are zeroed only if mspan.needzero is
-// false. If needzero is true, objects are zeroed as they are
-// allocated. There are various benefits to delaying zeroing this way:
+// 仅当mspan.needzero为false时，mspan中的自由对象槽才会归零。如果needzero为true，则对象在分配时归零。以这种方式延迟归零有很多好处
+// Free object slots in an mspan are zeroed only if mspan.needzero is false.
+// If needzero is true, objects are zeroed as they are allocated.
+// There are various benefits to delaying zeroing this way:
 //
 //	1. Stack frame allocation can avoid zeroing altogether.
 //
@@ -77,30 +90,28 @@
 //	   probably about to write to the memory.
 //
 //	3. We don't zero pages that never get reused.
-
-// Virtual memory layout
+// 1.堆栈帧分配可以完全避免归零。
+// 2.它表现出更好的时间局部性，因为程序可能要写入内存。
+// 3.我们不会零页面永远不会被重复使用。
 //
-// The heap consists of a set of arenas, which are 64MB on 64-bit and
-// 4MB on 32-bit (heapArenaBytes). Each arena's start address is also
-// aligned to the arena size.
 //
-// Each arena has an associated heapArena object that stores the
-// metadata for that arena: the heap bitmap for all words in the arena
-// and the span map for all pages in the arena. heapArena objects are
-// themselves allocated off-heap.
+// Virtual memory layout 虚拟内存的设计
 //
-// Since arenas are aligned, the address space can be viewed as a
-// series of arena frames. The arena map (mheap_.arenas) maps from
-// arena frame number to *heapArena, or nil for parts of the address
-// space not backed by the Go heap. The arena map is structured as a
-// two-level array consisting of a "L1" arena map and many "L2" arena
-// maps; however, since arenas are large, on many architectures, the
-// arena map consists of a single, large L2 map.
+// 堆是由一组arena组成
+// The heap consists of a set of arenas, which are 64MB on 64-bit and 4MB on 32-bit (heapArenaBytes).
+// Each arena's start address is also aligned to the arena size. 每一组arena开始的地址也是arena的大小
 //
-// The arena map covers the entire possible address space, allowing
-// the Go heap to use any part of the address space. The allocator
-// attempts to keep arenas contiguous so that large spans (and hence
-// large objects) can cross arenas.
+// Each arena has an associated heapArena object that stores the metadata for that arena:
+// the heap bitmap for all words in the arena and the span map for all pages in the arena.
+// heapArena objects are themselves allocated off-heap.
+//
+// Since arenas are aligned, the address space can be viewed as a series of arena frames.
+// The arena map (mheap_.arenas) maps from arena frame number to *heapArena, or nil for parts of the address space not backed by the Go heap.
+// The arena map is structured as a two-level array consisting of a "L1" arena map and many "L2" arena maps;
+// however, since arenas are large, on many architectures, the arena map consists of a single, large L2 map.
+//
+// The arena map covers the entire possible address space, allowing the Go heap to use any part of the address space.
+// The allocator attempts to keep arenas contiguous so that large spans (and hence large objects) can cross arenas.
 
 package runtime
 
@@ -120,36 +131,35 @@ const (
 	pageShift = _PageShift
 	pageSize  = _PageSize
 	pageMask  = _PageMask
-	// By construction, single page spans of the smallest object class
-	// have the most objects per span.
+	// By construction, single page spans of the smallest object class have the most objects per span.
+	// 通过构造，最小对象类的单页spans中有最多的对象
 	maxObjsPerSpan = pageSize / 8
 
 	mSpanInUse = _MSpanInUse
 
 	concurrentSweep = _ConcurrentSweep
-
+	// go中内存页的大小， 8k
 	_PageSize = 1 << _PageShift
 	_PageMask = _PageSize - 1
 
 	// _64bit = 1 on 64-bit systems, 0 on 32-bit systems
 	_64bit = 1 << (^uintptr(0) >> 63) / 2
 
-	// Tiny allocator parameters, see "Tiny allocator" comment in malloc.go.
+	// Tiny allocator parameters, see "Tiny allocator" comment in malloc.go.小分配器的参数
 	_TinySize      = 16
 	_TinySizeClass = int8(2)
 
-	_FixAllocChunk = 16 << 10               // Chunk size for FixAlloc
-	_MaxMHeapList  = 1 << (20 - _PageShift) // Maximum page length for fixed-size list in MHeap.
+	_FixAllocChunk = 16 << 10               // Chunk size for FixAlloc fixalloc块的大小
+	_MaxMHeapList  = 1 << (20 - _PageShift) // Maximum page length for fixed-size list in MHeap.MHeap中固定大小列表的最大页长
 
-	// Per-P, per order stack segment cache size.
+	// Per-P, per order stack segment cache size.每个p，每个订单栈段缓存的大小
 	_StackCacheSize = 32 * 1024
 
-	// Number of orders that get caching. Order 0 is FixedStack
-	// and each successive order is twice as large.
-	// We want to cache 2KB, 4KB, 8KB, and 16KB stacks. Larger stacks
-	// will be allocated directly.
-	// Since FixedStack is different on different systems, we
-	// must vary NumStackOrders to keep the same maximum cached size.
+	// Number of orders that get caching. 获得缓存的订单数量
+	// Order 0 is FixedStack and each successive order is twice as large.
+	// We want to cache 2KB, 4KB, 8KB, and 16KB stacks.
+	// Larger stacks will be allocated directly.较大的堆栈将直接分配
+	// Since FixedStack is different on different systems, we must vary NumStackOrders to keep the same maximum cached size.
 	//   OS               | FixedStack | NumStackOrders
 	//   -----------------+------------+---------------
 	//   linux/darwin/bsd | 2KB        | 4

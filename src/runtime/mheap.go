@@ -29,7 +29,7 @@ const minPhysPageSize = 4096
 //
 //go:notinheap
 type mheap struct {
-	lock      mutex
+	lock mutex
 	// 存放当前空闲的span
 	free      [_MaxMHeapList]mSpanList // free lists of given length up to _MaxMHeapList
 	freelarge mTreap                   // free treap of length >= _MaxMHeapList
@@ -229,7 +229,7 @@ type mSpanState uint8
 
 const (
 	_MSpanDead   mSpanState = iota
-	_MSpanInUse             // allocated for garbage collected heap
+	_MSpanInUse             // allocated for garbage collected heap 分配给垃圾回收的堆
 	_MSpanManual            // allocated for manual management (e.g., stack allocator)
 	_MSpanFree
 )
@@ -304,8 +304,8 @@ type mspan struct {
 	// paths.
 	// The sweep will free the old allocBits and set allocBits to the gcmarkBits.
 	// The gcmarkBits are replaced with a fresh zeroed out memory.
-	allocBits  *gcBits      // 分配位图
-	gcmarkBits *gcBits		// gc标记的位图，gc一次以后和allocBits是一样的
+	allocBits  *gcBits // 分配位图
+	gcmarkBits *gcBits // gc标记的位图，gc一次以后和allocBits是一样的
 
 	// sweep generation:
 	// if sweepgen == h->sweepgen - 2, the span needs sweeping			 准备清理
@@ -359,7 +359,7 @@ func recordspan(vh unsafe.Pointer, p unsafe.Pointer) {
 	s := (*mspan)(p)
 	// 判断当前spans的长度和容量的大小, 这个会出现大于的情况吗？
 	if len(h.allspans) >= cap(h.allspans) {
-		n := 64 * 1024 / sys.PtrSize    // 这个的值为8192
+		n := 64 * 1024 / sys.PtrSize // 这个的值为8192
 		if n < cap(h.allspans)*3/2 {
 			n = cap(h.allspans) * 3 / 2
 		}
@@ -395,7 +395,7 @@ type spanClass uint8
 
 const (
 	numSpanClasses = _NumSizeClasses << 1
-	tinySpanClass  = spanClass(tinySizeClass<<1 | 1)		// 最小的span class的大小
+	tinySpanClass  = spanClass(tinySizeClass<<1 | 1) // 最小的span class的大小
 )
 
 func makeSpanClass(sizeclass uint8, noscan bool) spanClass {
