@@ -116,8 +116,8 @@
 package runtime
 
 import (
-	"runtime/internal/atomic"
-	"runtime/internal/sys"
+	"readruntime/internal/atomic"
+	"readruntime/internal/sys"
 	"unsafe"
 )
 
@@ -160,6 +160,7 @@ const (
 	// We want to cache 2KB, 4KB, 8KB, and 16KB stacks.
 	// Larger stacks will be allocated directly.较大的堆栈将直接分配
 	// Since FixedStack is different on different systems, we must vary NumStackOrders to keep the same maximum cached size.
+	// 虽然不同系统之间的fixedStack是不同的，但是我们需要保持相同的cached的大小
 	//   OS               | FixedStack | NumStackOrders
 	//   -----------------+------------+---------------
 	//   linux/darwin/bsd | 2KB        | 4
@@ -168,9 +169,10 @@ const (
 	//   plan9            | 4KB        | 3
 	_NumStackOrders = 4 - sys.PtrSize/4*sys.GoosWindows - 1*sys.GoosPlan9
 
-	// heapAddrBits is the number of bits in a heap address. On
-	// amd64, addresses are sign-extended beyond heapAddrBits. On
-	// other arches, they are zero-extended.
+	// heapAddrBits is the number of bits in a heap address.
+	// heapAddrBits是堆地址的bits数
+	// On amd64, addresses are sign-extended beyond heapAddrBits.
+	// On other arches, they are zero-extended.
 	//
 	// On 64-bit platforms, we limit this to 48 bits based on a
 	// combination of hardware and OS limitations.
