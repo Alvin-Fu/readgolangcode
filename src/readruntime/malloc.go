@@ -174,28 +174,25 @@ const (
 	// On amd64, addresses are sign-extended beyond heapAddrBits.
 	// On other arches, they are zero-extended.
 	//
-	// On 64-bit platforms, we limit this to 48 bits based on a
-	// combination of hardware and OS limitations.
-	//
-	// amd64 hardware limits addresses to 48 bits, sign-extended
-	// to 64 bits. Addresses where the top 16 bits are not either
-	// all 0 or all 1 are "non-canonical" and invalid. Because of
-	// these "negative" addresses, we offset addresses by 1<<47
-	// (arenaBaseOffset) on amd64 before computing indexes into
-	// the heap arenas index. In 2017, amd64 hardware added
-	// support for 57 bit addresses; however, currently only Linux
-	// supports this extension and the kernel will never choose an
-	// address above 1<<47 unless mmap is called with a hint
-	// address above 1<<47 (which we never do).
-	//
-	// arm64 hardware (as of ARMv8) limits user addresses to 48
-	// bits, in the range [0, 1<<48).
-	//
-	// ppc64, mips64, and s390x support arbitrary 64 bit addresses
-	// in hardware. However, since Go only supports Linux on
-	// these, we lean on OS limits. Based on Linux's processor.h,
-	// the user address space is limited as follows on 64-bit
-	// architectures:
+	// On 64-bit platforms(平台), we limit this to 48 bits based on(基于) a combination(结合) of hardware(硬件) and OS limitations(限制).
+	// 在64位平台中，我们基于硬件和系统的因素我们把这个限制在48位
+	// amd64 hardware limits addresses to 48 bits, sign-extended(符号扩展) to 64 bits.
+	// 硬件的限制是48位但是符号的扩展是64位
+	// Addresses where the top 16 bits are not either all 0 or all 1 are "non-canonical"(非标准的) and invalid(无效的).
+	// 地址的前16位是无效的，即不被使用的
+	// Because of these "negative(否定的)" addresses,
+	// we offset addresses by 1<<47 (arenaBaseOffset) on amd64 before computing indexes into the heap arenas index.
+	// In 2017, amd64 hardware added support for 57 bit addresses;
+	// however, currently(目前) only Linux supports this extension(延长) and the kernel(内核) will never choose an
+	// address above(超过) 1<<47 unless mmap is called with a hint address above 1<<47 (which we never do).
+	//这里就是说不能超过48位，虽然linux已经延长到了57位，但是还是用不了
+	// arm64 hardware (as of ARMv8) limits user addresses to 48 bits, in the range [0, 1<<48).
+	// 在arm64硬件中限制使用地址是48位，即[0, 1<<48)
+	// ppc64, mips64, and s390x support arbitrary(任意的) 64 bit addresses in hardware.
+	// 这些平台支持的是全部的64位
+	// However, since Go only supports Linux on these, we lean on OS limits.
+	// 但是由于go只支持linux，因此我们依赖于操作系统的限制
+	// Based on Linux's processor.h(可以看看内核的这个文件), the user address space is limited as follows(遵循) on 64-bit architectures(架构):
 	//
 	// Architecture  Name              Maximum Value (exclusive)
 	// ---------------------------------------------------------------------
@@ -205,18 +202,16 @@ const (
 	// mips64{,le}   TASK_SIZE64       0x00010000000000 (40 bit addresses)
 	// s390x         TASK_SIZE         1<<64 (64 bit addresses)
 	//
-	// These limits may increase over time, but are currently at
-	// most 48 bits except on s390x. On all architectures, Linux
-	// starts placing mmap'd regions at addresses that are
-	// significantly below 48 bits, so even if it's possible to
-	// exceed Go's 48 bit limit, it's extremely unlikely in
-	// practice.
-	//
-	// On 32-bit platforms, we accept the full 32-bit address
-	// space because doing so is cheap.
-	// mips32 only has access to the low 2GB of virtual memory, so
-	// we further limit it to 31 bits.
-	//
+	// These limits may increase over time, but are currently at most 48 bits except on s390x.
+	// 随着时间的推移这些限制可能会增加，但是目前是48位，s390x除外
+	// On all architectures, Linux starts placing mmap'd regions at addresses that are significantly below 48 bits,
+	// 在所有的架构中，Linux开始时将放在mmap’d的地址放在低于48位地址上
+	// so even if it's possible to exceed Go's 48 bit limit, it's extremely unlikely in practice.
+	// 因此即使超过了go的48位的限制，这也是在实践中不可能的
+	// On 32-bit platforms, we accept the full 32-bit address space because doing so is cheap.
+	// 在32为体系中，接受了完整的地址空间，这样是简单的
+	// mips32 only has access to the low 2GB of virtual memory, so we further limit it to 31 bits.
+	// mips32
 	// WebAssembly currently has a limit of 4GB linear memory.
 	heapAddrBits = (_64bit*(1-sys.GoarchWasm))*48 + (1-_64bit+sys.GoarchWasm)*(32-(sys.GoarchMips+sys.GoarchMipsle))
 
