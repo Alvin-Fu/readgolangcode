@@ -215,15 +215,15 @@ const (
 	// WebAssembly currently has a limit of 4GB linear memory.
 	heapAddrBits = (_64bit*(1-sys.GoarchWasm))*48 + (1-_64bit+sys.GoarchWasm)*(32-(sys.GoarchMips+sys.GoarchMipsle))
 
-	// maxAlloc is the maximum size of an allocation. On 64-bit,
-	// it's theoretically possible to allocate 1<<heapAddrBits bytes. On
+	// maxAlloc is the maximum size of an allocation(分配).
+	// On 64-bit, it's theoretically(理论上) possible to allocate 1<<heapAddrBits bytes. On
 	// 32-bit, however, this is one less than 1<<32 because the
 	// number of bytes in the address space doesn't actually fit
 	// in a uintptr.
 	maxAlloc = (1 << heapAddrBits) - (1-_64bit)*1
 
 	// The number of bits in a heap address, the size of heap
-	// arenas, and the L1 and L2 arena map sizes are related by
+	// arenas, and the L1 and L2 arena map sizes are related(关联) by
 	//
 	//   (1 << addrBits) = arenaBytes * L1entries * L2entries
 	//
@@ -245,43 +245,33 @@ const (
 	// because all committed memory is charged to the process,
 	// even if it's not touched. Hence, for processes with small
 	// heaps, the mapped arena space needs to be commensurate.
-	// This is particularly important with the race detector,
-	// since it significantly amplifies the cost of committed
-	// memory.
+	// This is particularly(格外，异常) important with the race detector(种类探测),
+	// since it significantly amplifies(放大，扩大) the cost of committed memory.
 	heapArenaBytes = 1 << logHeapArenaBytes
 
-	// logHeapArenaBytes is log_2 of heapArenaBytes. For clarity,
+	// logHeapArenaBytes is log_2 of heapArenaBytes. For clarity(为清楚起见),
 	// prefer using heapArenaBytes where possible (we need the
-	// constant to compute some other constants).
+	// constant to compute(计算) some other constants).
 	logHeapArenaBytes = (6+20)*(_64bit*(1-sys.GoosWindows)) + (2+20)*(_64bit*sys.GoosWindows) + (2+20)*(1-_64bit)
 
-	// heapArenaBitmapBytes is the size of each heap arena's bitmap.
+	// heapArenaBitmapBytes is the size of each heap arena's bitmap.bitmap的大小
 	heapArenaBitmapBytes = heapArenaBytes / (sys.PtrSize * 8 / 2)
 
 	pagesPerArena = heapArenaBytes / pageSize
 
-	// arenaL1Bits is the number of bits of the arena number
-	// covered by the first level arena map.
+	// arenaL1Bits is the number of bits of the arena number covered by the first level arena map.
 	//
-	// This number should be small, since the first level arena
-	// map requires PtrSize*(1<<arenaL1Bits) of space in the
-	// binary's BSS. It can be zero, in which case the first level
-	// index is effectively unused. There is a performance benefit
-	// to this, since the generated code can be more efficient,
-	// but comes at the cost of having a large L2 mapping.
+	// This number should be small, since the first level arena map requires PtrSize*(1<<arenaL1Bits) of space in the binary's BSS.
+	// It can be zero, in which case the first level index is effectively unused.
+	// There is a performance benefit to this, since the generated code can be more efficient, but comes at the cost of having a large L2 mapping.
 	//
-	// We use the L1 map on 64-bit Windows because the arena size
-	// is small, but the address space is still 48 bits, and
-	// there's a high cost to having a large L2.
-	arenaL1Bits = 6 * (_64bit * sys.GoosWindows)
+	// We use the L1 map on 64-bit Windows because the arena size is small, but the address space is still 48 bits, and there's a high cost to having a large L2.
+	arenaL1Bits = 6 * (_64bit * sys.GoosWindows) // L1的大小
 
-	// arenaL2Bits is the number of bits of the arena number
-	// covered by the second level arena index.
+	// arenaL2Bits is the number of bits of the arena number covered by the second level arena index.
 	//
-	// The size of each arena map allocation is proportional to
-	// 1<<arenaL2Bits, so it's important that this not be too
-	// large. 48 bits leads to 32MB arena index allocations, which
-	// is about the practical threshold.
+	// The size of each arena map allocation is proportional to 1<<arenaL2Bits, so it's important that this not be too large.
+	// 48 bits leads to 32MB arena index allocations(内存分配), which is about the practical threshold(实际的阈值).
 	arenaL2Bits = heapAddrBits - logHeapArenaBytes - arenaL1Bits
 
 	// arenaL1Shift is the number of bits to shift an arena frame
@@ -293,40 +283,39 @@ const (
 	// the L2 arena map.
 	arenaBits = arenaL1Bits + arenaL2Bits
 
-	// arenaBaseOffset is the pointer value that corresponds to
+	// arenaBaseOffset is the pointer value that corresponds to(相对应的)
 	// index 0 in the heap arena map.
 	//
-	// On amd64, the address space is 48 bits, sign extended to 64
+	// On amd64, the address space is 48 bits, sign extended(符号扩展) to 64
 	// bits. This offset lets us handle "negative" addresses (or
 	// high addresses if viewed as unsigned).
 	//
-	// On other platforms, the user address space is contiguous
-	// and starts at 0, so no offset is necessary.
+	// On other platforms(平台), the user address space is contiguous(相连的)
+	// and starts(开始) at 0, so no offset(偏移量) is necessary.
 	arenaBaseOffset uintptr = sys.GoarchAmd64 * (1 << 47)
 
-	// Max number of threads to run garbage collection.
-	// 2, 3, and 4 are all plausible maximums depending
-	// on the hardware details of the machine. The garbage
-	// collector scales well to 32 cpus.
+	// Max number of threads to run garbage collection.表示最大可以跑gc的线程数
+	// 2, 3, and 4 are all plausible(看似合理的) maximums depending on the hardware details of the machine.
+	// 这些看是合理的数量是依赖与计算机的硬件基础的
+	// The garbage collector scales well to 32 cpus.
+	// 这个gc可以平衡到最好的是32cpu
 	_MaxGcproc = 32
 
 	// minLegalPointer is the smallest possible legal pointer.
-	// This is the smallest possible architectural page size,
-	// since we assume that the first page is never mapped.
-	//
+	// This is the smallest possible architectural page size, since we assume(假设) that the first page is never mapped(映射).
+	// 这可能是最小架构页的大小，我们假设从来没有映射过第一个页。
 	// This should agree with minZeroPage in the compiler.
+	// 这应该和编译器的minZeroPage是一致的
 	minLegalPointer uintptr = 4096
 )
 
-// physPageSize is the size in bytes of the OS's physical pages.
-// Mapping and unmapping operations must be done at multiples of
-// physPageSize.
+// physPageSize is the size in bytes of the OS's physical pages.  这是系统的物理页的大小
+// Mapping and unmapping operations must be done at multiples(倍数) of physPageSize.
 //
-// This must be set by the OS init code (typically in osinit) before
-// mallocinit.
+// This must be set by the OS init code (typically in osinit) before mallocinit.
 var physPageSize uintptr
 
-// OS-defined helpers:
+// OS-defined helpers: 系统定义的一些帮助函数
 //
 // sysAlloc obtains a large chunk of zeroed memory from the
 // operating system, typically on the order of a hundred kilobytes
