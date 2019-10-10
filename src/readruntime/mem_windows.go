@@ -101,7 +101,7 @@ func sysFault(v unsafe.Pointer, n uintptr) {
 func sysReserve(v unsafe.Pointer, n uintptr) unsafe.Pointer {
 	// v is just a hint.
 	// First try at v.
-	// This will fail if any of [v, v+n) is already reserved.
+	// This will fail if any of [v, v+n) is already reserved.如果区间内的任何一个都被保留了，则会失败
 	v = unsafe.Pointer(stdcall4(_VirtualAlloc, uintptr(v), n, _MEM_RESERVE, _PAGE_READWRITE))
 	if v != nil {
 		return v
