@@ -158,8 +158,7 @@ func totaldefersize(siz uintptr) uintptr {
 	return deferHeaderSize + siz
 }
 
-// Ensure that defer arg sizes that map to the same defer size class
-// also map to the same malloc size class.
+// Ensure that defer arg sizes that map to the same defer size class also map to the same malloc size class.
 func testdefersizes() {
 	var m [len(p{}.deferpool)]int32
 
@@ -594,10 +593,10 @@ func sync_throw(s string) {
 	throw(s)
 }
 
+// 跳过栈溢出检查
 //go:nosplit
 func throw(s string) {
-	// Everything throw does should be recursively nosplit so it
-	// can be called even when it's unsafe to grow the stack.
+	// Everything throw does should be recursively nosplit so it can be called even when it's unsafe to grow the stack.
 	systemstack(func() {
 		print("fatal error: ", s, "\n")
 	})

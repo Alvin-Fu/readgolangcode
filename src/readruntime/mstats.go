@@ -7,20 +7,21 @@
 package runtime
 
 import (
-	"runtime/internal/atomic"
-	"runtime/internal/sys"
+	"readruntime/internal/atomic"
+	"readruntime/internal/sys"
 	"unsafe"
 )
 
-// Statistics.
+// Statistics. 统计信息
 // If you edit this structure, also edit type MemStats below.
+// 如果修改了mstas也必须修改MemStats
 // Their layouts must match exactly.
-//
+// 他们之间必须是同步的
 // For detailed descriptions see the documentation for MemStats.
 // Fields that differ from MemStats are further documented here.
 //
-// Many of these fields are updated on the fly, while others are only
-// updated when updatememstats is called.
+// Many of these fields are updated on the fly, while others are only updated when updatememstats is called.
+// 许多字段是动态更新的，其他的则是调用updatememstats时更新的
 type mstats struct {
 	// General statistics.
 	alloc       uint64 // bytes allocated and not yet freed
@@ -36,7 +37,7 @@ type mstats struct {
 	// Like MemStats, heap_sys and heap_inuse do not count memory
 	// in manually-managed spans.
 	heap_alloc    uint64 // bytes allocated and not yet freed (same as alloc above)
-	heap_sys      uint64 // virtual address space obtained from system for GC'd heap
+	heap_sys      uint64 // virtual address space obtained from system for GC'd heap 从系统获得的地址空间，为了gc的堆
 	heap_idle     uint64 // bytes in idle spans
 	heap_inuse    uint64 // bytes in _MSpanInUse spans
 	heap_released uint64 // bytes released to the os

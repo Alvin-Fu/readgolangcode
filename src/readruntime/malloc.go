@@ -317,36 +317,45 @@ var physPageSize uintptr
 
 // OS-defined helpers: 系统定义的一些帮助函数
 //
-// sysAlloc obtains a large chunk of zeroed memory from the
+// sysAlloc obtains(获得) a large chunk of zeroed memory from the
 // operating system, typically on the order of a hundred kilobytes
 // or a megabyte.
 // NOTE: sysAlloc returns OS-aligned memory, but the heap allocator
-// may use larger alignment, so the caller must be careful to realign the
+// may use larger alignment, so the caller must be careful to realign(重新对齐) the
 // memory obtained by sysAlloc.
 //
-// SysUnused notifies the operating system that the contents
-// of the memory region are no longer needed and can be reused
-// for other purposes.
-// SysUsed notifies the operating system that the contents
-// of the memory region are needed again.
+// SysUnused notifies(通知) the operating system that the contents of the memory region are no longer needed and can be reused for other purposes(用途).
+// SysUnused是用于通知操作系统这块内存不在使用了，可以回收了
+// SysUsed notifies the operating system that the contents of the memory region are needed again.
+// SysUsed是用于通知操作系统这块内存将会被再次使用
 //
-// SysFree returns it unconditionally; this is only used if
-// an out-of-memory error has been detected midway through
-// an allocation. It is okay if SysFree is a no-op.
+// SysFree returns it unconditionally(无条件的),
+// this is only used if an out-of-memory error has been detected midway through an allocation.
+// 仅仅是在分配的过程中发现内存不足时的使用
+// It is okay if SysFree is a no-op.
 //
 // SysReserve reserves address space without allocating memory.
-// If the pointer passed to it is non-nil, the caller wants the
-// reservation there, but SysReserve can still choose another
-// location if that one is unavailable.
-// NOTE: SysReserve returns OS-aligned memory, but the heap allocator
-// may use larger alignment, so the caller must be careful to realign the
-// memory obtained by sysAlloc.
+// 用于保留地址空间，而不分配内存
+// If the pointer passed to it is non-nil, the caller wants the reservation there,
+// but SysReserve can still choose another location if that one is unavailable.
+// NOTE: SysReserve returns OS-aligned memory,
+// but the heap allocator may use larger alignment, so the caller must be careful to realign the memory obtained by sysAlloc.
 //
 // SysMap maps previously reserved address space for use.
+// 映射一段预留的的地址空间， os不一定会给
 //
-// SysFault marks a (already sysAlloc'd) region to fault
-// if accessed. Used only for debugging the runtime.
+// SysFault marks a (already sysAlloc'd) region to fault if accessed. Used only for debugging the runtime.
+//
 
+// 实现内存分配的一些初始化，检查对象规格大小对照表，还将连续的虚拟地址划分为三块
+//
+/*
+512MB      16GB            512GB
++-------+-------------+-------------------+
+| spans |    bitmap   |       arena       |
++-------+-------------+-------------------+
+*/
+// 这三个区域是按需进行扩展，不需要预先分配
 func mallocinit() {
 	if class_to_size[_TinySizeClass] != _TinySize {
 		throw("bad TinySizeClass")
@@ -355,67 +364,66 @@ func mallocinit() {
 	testdefersizes()
 
 	if heapArenaBitmapBytes&(heapArenaBitmapBytes-1) != 0 {
-		// heapBits expects modular arithmetic on bitmap
-		// addresses to work.
+		// heapBits expects modular arithmetic on bitmap addresses to work.
 		throw("heapArenaBitmapBytes not a power of 2")
 	}
 
-	// Copy class sizes out for statistics table.
+	// Copy class sizes out for statistics table.复制统计表中的类大小
 	for i := range class_to_size {
 		memstats.by_size[i].size = uint32(class_to_size[i])
 	}
 
-	// Check physPageSize.
+	// Check physPageSize. 检查物理页的大小
 	if physPageSize == 0 {
 		// The OS init code failed to fetch the physical page size.
+		// 表示系统初始化失败，未能获取到物理页的大小
 		throw("failed to get system page size")
 	}
 	if physPageSize < minPhysPageSize {
+		// 检查和最小物理页的关系
 		print("system page size (", physPageSize, ") is smaller than minimum page size (", minPhysPageSize, ")\n")
 		throw("bad system page size")
 	}
 	if physPageSize&(physPageSize-1) != 0 {
+		// 检查物理页和2的关系
 		print("system page size (", physPageSize, ") must be a power of 2\n")
 		throw("bad system page size")
 	}
 
-	// Initialize the heap.
+	// Initialize the heap.初始化堆，就是在初始化span，mcache等这些
 	mheap_.init()
+	// 获取主线程
 	_g_ := getg()
+	// 为主线程分配mcache
 	_g_.m.mcache = allocmcache()
 
 	// Create initial arena growth hints.
 	if sys.PtrSize == 8 && GOARCH != "wasm" {
 		// On a 64-bit machine, we pick the following hints
+		// 在64为机器中我们使用这些东西
 		// because:
 		//
-		// 1. Starting from the middle of the address space
-		// makes it easier to grow out a contiguous range
-		// without running in to some other mapping.
+		// 1. Starting from the middle(中间) of the address space makes it easier to grow out a contiguous range without running in to some other mapping.
 		//
-		// 2. This makes Go heap addresses more easily
-		// recognizable when debugging.
+		// 2. This makes Go heap addresses more easily recognizable when debugging.
 		//
 		// 3. Stack scanning in gccgo is still conservative,
-		// so it's important that addresses be distinguishable
-		// from other data.
+		// so it's important that addresses be distinguishable from other data.
 		//
-		// Starting at 0x00c0 means that the valid memory addresses
+		// Starting at 0x00c0 means that the valid(有效的) memory addresses
 		// will begin 0x00c0, 0x00c1, ...
 		// In little-endian, that's c0 00, c1 00, ... None of those are valid
-		// UTF-8 sequences, and they are otherwise as far away from
-		// ff (likely a common byte) as possible. If that fails, we try other 0xXXc0
-		// addresses. An earlier attempt to use 0x11f8 caused out of memory errors
-		// on OS X during thread allocations.  0x00c0 causes conflicts with
-		// AddressSanitizer which reserves all memory up to 0x0100.
-		// These choices reduce the odds of a conservative garbage collector
-		// not collecting memory because some non-pointer block of memory
-		// had a bit pattern that matched a memory address.
-		//
-		// However, on arm64, we ignore all this advice above and slam the
-		// allocation at 0x40 << 32 because when using 4k pages with 3-level
-		// translation buffers, the user address space is limited to 39 bits
-		// On darwin/arm64, the address space is even smaller.
+		// UTF-8 sequences(序列), and they are otherwise as far away from ff (likely a common byte) as possible.
+		// If that fails, we try other 0xXXc0 addresses.
+		// An earlier attempt to use 0x11f8 caused out of memory errors on OS X during thread allocations.
+		// 0x00c0 causes conflicts with AddressSanitizer which reserves all memory up to 0x0100.
+		// These choices reduce the odds of a conservative garbage collector not collecting memory
+		// because some non-pointer block of memory had a bit pattern that matched a memory address.
+		// 这里应该说的是为什么size_class一半保存的是含有指针的，一半是不含有指针的
+		// garbage collector 表示GC
+		// However, on arm64, we ignore all this advice above and slam the allocation at 0x40 << 32
+		// because when using 4k pages with 3-level translation buffers,
+		// the user address space is limited to 39 bits On darwin/arm64, the address space is even smaller.
 		for i := 0x7f; i >= 0; i-- {
 			var p uintptr
 			switch {
@@ -424,9 +432,7 @@ func mallocinit() {
 			case GOARCH == "arm64":
 				p = uintptr(i)<<40 | uintptrMask&(0x0040<<32)
 			case raceenabled:
-				// The TSAN runtime requires the heap
-				// to be in the range [0x00c000000000,
-				// 0x00e000000000).
+				// The TSAN runtime requires the heap to be in the range [0x00c000000000, 0x00e000000000).
 				p = uintptr(i)<<32 | uintptrMask&(0x00c0<<32)
 				if p >= uintptrMask&0x00e000000000 {
 					continue
@@ -434,8 +440,9 @@ func mallocinit() {
 			default:
 				p = uintptr(i)<<40 | uintptrMask&(0x00c0<<32)
 			}
+			// 分配器,分配arena区域
 			hint := (*arenaHint)(mheap_.arenaHintAlloc.alloc())
-			hint.addr = p
+			hint.addr = p // 这个应该是起始地址
 			hint.next, mheap_.arenaHints = mheap_.arenaHints, hint
 		}
 	} else {
@@ -507,17 +514,19 @@ func mallocinit() {
 	}
 }
 
-// sysAlloc allocates heap arena space for at least n bytes. The
-// returned pointer is always heapArenaBytes-aligned and backed by
-// h.arenas metadata. The returned size is always a multiple of
-// heapArenaBytes. sysAlloc returns nil on failure.
+// sysAlloc allocates heap arena space for at least n bytes. 分配至少n个字节的堆空间
+// The returned pointer is always heapArenaBytes-aligned and backed by h.arenas metadata.
+// 返回值总是 _PageSize 对齐的(8k对齐)且处于arena_start和arena_end之间
+// The returned size is always a multiple of heapArenaBytes.
+// 返回的总是heapArenaBytes的倍数， heapArenaBytes是2的幂
+// sysAlloc returns nil on failure.
 // There is no corresponding free function.
-//
+// 没有对应的释放函数
 // h must be locked.
 func (h *mheap) sysAlloc(n uintptr) (v unsafe.Pointer, size uintptr) {
 	n = round(n, heapArenaBytes)
 
-	// First, try the arena pre-reservation.
+	// First, try the arena pre-reservation. 尝试分配arena区域
 	v = h.arena.alloc(n, heapArenaBytes, &memstats.heap_sys)
 	if v != nil {
 		size = n
@@ -529,6 +538,7 @@ func (h *mheap) sysAlloc(n uintptr) (v unsafe.Pointer, size uintptr) {
 		hint := h.arenaHints
 		p := hint.addr
 		if hint.down {
+			// 表示arena可以扩展
 			p -= n
 		}
 		if p+n < p {
@@ -549,12 +559,10 @@ func (h *mheap) sysAlloc(n uintptr) (v unsafe.Pointer, size uintptr) {
 			size = n
 			break
 		}
-		// Failed. Discard this hint and try the next.
+		// Failed. Discard this hint and try the next. 失败了会尝试下一次
 		//
-		// TODO: This would be cleaner if sysReserve could be
-		// told to only return the requested address. In
-		// particular, this is already how Windows behaves, so
-		// it would simply things there.
+		// TODO: This would be cleaner if sysReserve could be told to only return the requested address.
+		// In particular, this is already how Windows behaves, so it would simply things there.
 		if v != nil {
 			sysFree(v, n, nil)
 		}
@@ -1222,7 +1230,7 @@ func (l *linearAlloc) alloc(size, align uintptr, sysStat *uint64) unsafe.Pointer
 	}
 	l.next = p + size
 	if pEnd := round(l.next-1, physPageSize); pEnd > l.mapped {
-		// We need to map more of the reserved space.
+		// We need to map more of the reserved(预留) space.
 		sysMap(unsafe.Pointer(l.mapped), pEnd-l.mapped, sysStat)
 		l.mapped = pEnd
 	}

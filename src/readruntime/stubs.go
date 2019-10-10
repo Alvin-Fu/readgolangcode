@@ -293,6 +293,8 @@ func systemstack_switch()
 
 // round n up to a multiple of a.  a must be a power of 2.
 func round(n, a uintptr) uintptr {
+	// a &^ b 这个表示先对b进行按位取反，然后进行与操作
+	// 返回的数字是2的倍数
 	return (n + a - 1) &^ (a - 1)
 }
 

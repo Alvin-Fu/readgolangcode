@@ -126,11 +126,10 @@ type mheap struct {
 	// this space to avoid interleaving it with the heap itself.
 	heapArenaAlloc linearAlloc
 
-	// arenaHints is a list of addresses at which to attempt to
-	// add more heap arenas. This is initially populated with a
-	// set of general hint addresses, and grown with the bounds of
-	// actual heap arena ranges.
-	arenaHints *arenaHint
+	// arenaHints is a list of addresses at which to attempt to add more heap arenas.
+	// This is initially populated with a set of general hint addresses,
+	// and grown with the bounds of actual heap arena ranges.
+	arenaHints *arenaHint // 表示一个arena的地址列表，并且是按需增长的
 
 	// arena is a pre-reserved space for allocating heap arenas
 	// (the actual arenas). This is only used on 32-bit.
@@ -189,13 +188,13 @@ type heapArena struct {
 	spans [pagesPerArena]*mspan
 }
 
-// arenaHint is a hint for where to grow the heap arenas. See
-// mheap_.arenaHints.
+// arenaHint is a hint for where to grow the heap arenas. See mheap_.arenaHints.
 //
+// 下面的指令表示不允许从GC堆上申请内存， 用于避免调度器和内存分配中的写屏障
 //go:notinheap
 type arenaHint struct {
 	addr uintptr
-	down bool
+	down bool // 为true时表示arena可以扩展
 	next *arenaHint
 }
 

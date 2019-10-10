@@ -29,7 +29,7 @@ type fixalloc struct {
 	first  func(arg, p unsafe.Pointer) // called first time p is returned
 	arg    unsafe.Pointer
 	list   *mlink
-	chunk  uintptr // use uintptr instead of unsafe.Pointer to avoid write barriers
+	chunk  uintptr // use uintptr instead of unsafe.Pointer to avoid(避免) write barriers(写屏障)
 	nchunk uint32
 	inuse  uintptr // in-use bytes now
 	stat   *uint64
