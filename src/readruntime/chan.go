@@ -29,6 +29,9 @@ const (
 	debugChan = false
 )
 
+// channel的底层数据结构
+// channel就是一个循环队列，加锁，轻量级的锁
+//
 type hchan struct {
 	qcount   uint           // total data in the queue
 	dataqsiz uint           // size of the circular queue 循环数组的长度
@@ -38,8 +41,8 @@ type hchan struct {
 	elemtype *_type // element type
 	sendx    uint   // send index 已发送元素在循环数组中的索引
 	recvx    uint   // receive index 已接收元素在循环数组中的索引
-	recvq    waitq  // list of recv waiters  接收等待列表
-	sendq    waitq  // list of send waiters  发送等待列表
+	recvq    waitq  // list of recv waiters  读操作阻塞在channel的g队列
+	sendq    waitq  // list of send waiters  写操作阻塞在channel的g队列
 
 	// lock protects all fields in hchan, as well as several fields in sudogs blocked on this channel.
 	//
@@ -66,10 +69,11 @@ func makechan64(t *chantype, size int64) *hchan {
 	return makechan(t, int(size))
 }
 
+// 创建一个chan并分配内存
 func makechan(t *chantype, size int) *hchan {
 	elem := t.elem
 
-	// compiler checks this but be safe.
+	// compiler(编译器) checks this but be safe.
 	if elem.size >= 1<<16 {
 		throw("makechan: invalid channel element type")
 	}
@@ -86,6 +90,7 @@ func makechan(t *chantype, size int) *hchan {
 	// SudoG's are referenced from their owning thread so they can't be collected.
 	// TODO(dvyukov,rlh): Rethink when collector can move allocated objects.
 	var c *hchan
+	// 根据实际情况分配内存，分为三类无缓存，不包含指针，包含指针
 	switch {
 	case size == 0 || elem.size == 0:
 		// Queue or element size is zero. 无缓存的chan
@@ -95,6 +100,7 @@ func makechan(t *chantype, size int) *hchan {
 	case elem.kind&kindNoPointers != 0:
 		// Elements do not contain pointers.
 		// Allocate hchan and buf in one call.
+		// 不包含指针的直接全量分配hchan和元素占的内存
 		c = (*hchan)(mallocgc(hchanSize+uintptr(size)*elem.size, nil, true))
 		c.buf = add(unsafe.Pointer(c), hchanSize)
 	default:
@@ -115,6 +121,7 @@ func makechan(t *chantype, size int) *hchan {
 }
 
 // chanbuf(c, i) is pointer to the i'th slot in the buffer.
+// 指向缓冲区的第一个槽的指针
 func chanbuf(c *hchan, i uint) unsafe.Pointer {
 	return add(c.buf, uintptr(i)*uintptr(c.elemsize))
 }
@@ -127,21 +134,23 @@ func chansend1(c *hchan, elem unsafe.Pointer) {
 
 /*
  * generic single channel send/recv
- * If block is not nil,
- * then the protocol will not
- * sleep but return if it could
- * not complete.
+ * If block is not nil,then the protocol will not sleep but return if it could not complete.
  *
  * sleep can wake up with g.param == nil
  * when a channel involved in the sleep has
  * been closed.  it is easiest to loop and re-run
  * the operation; we'll see that it's now closed.
  */
+// 给通道发送数据分为三种情况
+//
 func chansend(c *hchan, ep unsafe.Pointer, block bool, callerpc uintptr) bool {
+	// 向一个空的chan中发送数据，会使得goroutine阻塞
 	if c == nil {
+		// 判断是否需要阻塞
 		if !block {
 			return false
 		}
+		// 将当前的goroutine置于等待状态
 		gopark(nil, nil, waitReasonChanSendNilChan, traceEvGoStop, 2)
 		throw("unreachable")
 	}
@@ -191,7 +200,7 @@ func chansend(c *hchan, ep unsafe.Pointer, block bool, callerpc uintptr) bool {
 		send(c, sg, ep, func() { unlock(&c.lock) }, 3)
 		return true
 	}
-
+	// 如果缓冲区还有空间，
 	if c.qcount < c.dataqsiz {
 		// Space is available in the channel buffer. Enqueue the element to send.
 		qp := chanbuf(c, c.sendx)
