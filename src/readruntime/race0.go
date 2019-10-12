@@ -12,7 +12,7 @@ import (
 	"unsafe"
 )
 
-const raceenabled = false
+const raceenabled = false //是否开启竞争的标志
 
 // Because raceenabled is false, none of these functions should be called.
 

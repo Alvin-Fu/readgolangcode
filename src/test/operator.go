@@ -8,4 +8,6 @@ func main() {
 	fmt.Println(n + a - 1)
 	fmt.Println(a - 1)
 	fmt.Println((n + a - 1) &^ (a - 1))
+	//var b Bits
+	fmt.Println(a ^ 4)
 }

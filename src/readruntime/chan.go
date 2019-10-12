@@ -4,6 +4,7 @@
 
 package runtime
 
+// go中channels的实现
 // This file contains the implementation of Go channels.
 
 // Invariants:
@@ -18,7 +19,7 @@ package runtime
 //  c.qcount < c.dataqsiz implies that c.sendq is empty.
 
 import (
-	"runtime/internal/atomic"
+	"readruntime/internal/atomic"
 	"unsafe"
 )
 
@@ -37,15 +38,13 @@ type hchan struct {
 	elemtype *_type // element type
 	sendx    uint   // send index 已发送元素在循环数组中的索引
 	recvx    uint   // receive index 已接收元素在循环数组中的索引
-	recvq    waitq  // list of recv waiters
-	sendq    waitq  // list of send waiters
+	recvq    waitq  // list of recv waiters  接收等待列表
+	sendq    waitq  // list of send waiters  发送等待列表
 
-	// lock protects all fields in hchan, as well as several
-	// fields in sudogs blocked on this channel.
+	// lock protects all fields in hchan, as well as several fields in sudogs blocked on this channel.
 	//
-	// Do not change another G's status while holding this lock
-	// (in particular, do not ready a G), as this can deadlock
-	// with stack shrinking.
+	// Do not change another G's status while holding this lock (in particular, do not ready a G),
+	// as this can deadlock with stack shrinking.
 	lock mutex
 }
 

@@ -278,9 +278,8 @@ const (
 	// number by to compute an index into the first level arena map.
 	arenaL1Shift = arenaL2Bits
 
-	// arenaBits is the total bits in a combined arena map index.
-	// This is split between the index into the L1 arena map and
-	// the L2 arena map.
+	// arenaBits is the total bits in a combined arena map index.这是所有的arena映射索引的所有位
+	// This is split between the index into the L1 arena map and the L2 arena map.
 	arenaBits = arenaL1Bits + arenaL2Bits
 
 	// arenaBaseOffset is the pointer value that corresponds to(相对应的)
@@ -534,6 +533,7 @@ func (h *mheap) sysAlloc(n uintptr) (v unsafe.Pointer, size uintptr) {
 	}
 
 	// Try to grow the heap at a hint address.
+	// 这段代码的意思就是看看堆的可增长部分是否可以进行分配
 	for h.arenaHints != nil {
 		hint := h.arenaHints
 		p := hint.addr
@@ -545,12 +545,14 @@ func (h *mheap) sysAlloc(n uintptr) (v unsafe.Pointer, size uintptr) {
 			// We can't use this, so don't ask.
 			v = nil
 		} else if arenaIndex(p+n-1) >= 1<<arenaBits {
+			// 表示取到的下标必须小于索引位， 不能越界
 			// Outside addressable heap. Can't use.
 			v = nil
 		} else {
 			v = sysReserve(unsafe.Pointer(p), n)
 		}
 		if p == uintptr(v) {
+			// 这段表示分配成功，然后将hint的信息更新
 			// Success. Update the hint.
 			if !hint.down {
 				p += n
@@ -569,7 +571,7 @@ func (h *mheap) sysAlloc(n uintptr) (v unsafe.Pointer, size uintptr) {
 		h.arenaHints = hint.next
 		h.arenaHintAlloc.free(unsafe.Pointer(hint))
 	}
-
+	// 再次检查size的大小
 	if size == 0 {
 		if raceenabled {
 			// The race detector assumes the heap lives in
@@ -579,15 +581,16 @@ func (h *mheap) sysAlloc(n uintptr) (v unsafe.Pointer, size uintptr) {
 			throw("too many address space collisions for -race mode")
 		}
 
-		// All of the hints failed, so we'll take any
-		// (sufficiently aligned) address the kernel will give
-		// us.
+		// All of the hints failed, so we'll take any (sufficiently aligned) address the kernel will give us.
+		// 当所有的hits失败的时候我们将使用内核提供的任何地址(充分对齐)
+		// 这块就是再从操作系统中获取内存
 		v, size = sysReserveAligned(nil, n, heapArenaBytes)
 		if v == nil {
 			return nil, 0
 		}
 
 		// Create new hints for extending this region.
+		// 创建一个新的hints为了扩展的区域
 		hint := (*arenaHint)(h.arenaHintAlloc.alloc())
 		hint.addr, hint.down = uintptr(v), true
 		hint.next, mheap_.arenaHints = mheap_.arenaHints, hint
@@ -623,15 +626,16 @@ func (h *mheap) sysAlloc(n uintptr) (v unsafe.Pointer, size uintptr) {
 	sysMap(v, size, &memstats.heap_sys)
 
 mapped:
-	// Create arena metadata.
+	// Create arena metadata.创建arena的元数据
 	for ri := arenaIndex(uintptr(v)); ri <= arenaIndex(uintptr(v)+size-1); ri++ {
 		l2 := h.arenas[ri.l1()]
 		if l2 == nil {
-			// Allocate an L2 arena map.
+			// Allocate an L2 arena map.给L2分配一个arena
 			l2 = (*[1 << arenaL2Bits]*heapArena)(persistentalloc(unsafe.Sizeof(*l2), sys.PtrSize, nil))
 			if l2 == nil {
 				throw("out of memory allocating heap arena map")
 			}
+			// 利用原子性操作
 			atomic.StorepNoWB(unsafe.Pointer(&h.arenas[ri.l1()]), unsafe.Pointer(l2))
 		}
 
@@ -649,8 +653,8 @@ mapped:
 
 		// Store atomically just in case an object from the
 		// new heap arena becomes visible before the heap lock
-		// is released (which shouldn't happen, but there's
-		// little downside to this).
+		// is released (which shouldn't happen, but there's little downside to this).
+		// 这个设计就是防止出错，虽然基本不可能有问题
 		atomic.StorepNoWB(unsafe.Pointer(&l2[ri.l2()]), unsafe.Pointer(r))
 	}
 
@@ -662,13 +666,12 @@ mapped:
 	return
 }
 
-// sysReserveAligned is like sysReserve, but the returned pointer is
-// aligned to align bytes. It may reserve either n or n+align bytes,
-// so it returns the size that was reserved.
+// sysReserveAligned is like sysReserve, but the returned pointer is aligned to align bytes.
+// It may reserve either n or n+align bytes, so it returns the size that was reserved.
+// 返回的字节是对齐的
 func sysReserveAligned(v unsafe.Pointer, size, align uintptr) (unsafe.Pointer, uintptr) {
-	// Since the alignment is rather large in uses of this
-	// function, we're not likely to get it by chance, so we ask
-	// for a larger region and remove the parts we don't need.
+	// Since the alignment is rather large in uses of this function, we're not likely to get it by chance,
+	// so we ask for a larger region and remove the parts we don't need.
 	retries := 0
 retry:
 	p := uintptr(sysReserve(v, size+align))
@@ -710,13 +713,16 @@ retry:
 	}
 }
 
-// base address for all 0-byte allocations
+// base address for all 0-byte allocations 所有0字节分配的基本地址
 var zerobase uintptr
 
 // nextFreeFast returns the next free object if one is quickly available.
+// 返回下一个空闲可用对象（如果有一个快速可用的对象）
 // Otherwise it returns 0.
 func nextFreeFast(s *mspan) gclinkptr {
+	// 查看第几位开始是0，即找到可用的
 	theBit := sys.Ctz64(s.allocCache) // Is there a free object in the allocCache?
+	// 如果超过了长度了则不进行处理，即返回0
 	if theBit < 64 {
 		result := s.freeindex + uintptr(theBit)
 		if result < s.nelems {
@@ -772,8 +778,8 @@ func (c *mcache) nextFree(spc spanClass) (v gclinkptr, s *mspan, shouldhelpgc bo
 }
 
 // Allocate an object of size bytes.
-// Small objects are allocated from the per-P cache's free lists.
-// Large objects (> 32 kB) are allocated straight from the heap.
+// Small objects are allocated from the per-P cache's free lists. 小的objects通过p的cache分配
+// Large objects (> 32 kB) are allocated straight from the heap.  大的objects直接在堆上分配
 func mallocgc(size uintptr, typ *_type, needzero bool) unsafe.Pointer {
 	if gcphase == _GCmarktermination {
 		throw("mallocgc called with gcphase == _GCmarktermination")

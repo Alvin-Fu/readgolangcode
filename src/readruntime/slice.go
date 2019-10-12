@@ -5,7 +5,7 @@
 package runtime
 
 import (
-	"runtime/internal/sys"
+	"readruntime/internal/sys"
 	"unsafe"
 )
 
@@ -37,6 +37,7 @@ var maxElems = [...]uintptr{
 }
 
 // maxSliceCap returns the maximum capacity for a slice.
+// 返回一个切片的最大容量
 func maxSliceCap(elemsize uintptr) uintptr {
 	if elemsize < uintptr(len(maxElems)) {
 		return maxElems[elemsize]
@@ -44,21 +45,25 @@ func maxSliceCap(elemsize uintptr) uintptr {
 	return maxAlloc / elemsize
 }
 
+// panic 切片的长度越界
 func panicmakeslicelen() {
 	panic(errorString("makeslice: len out of range"))
 }
 
+// panic 切片的容量越界
 func panicmakeslicecap() {
 	panic(errorString("makeslice: cap out of range"))
 }
 
+// 创建一个切片
 func makeslice(et *_type, len, cap int) slice {
 	// NOTE: The len > maxElements check here is not strictly necessary,
-	// but it produces a 'len out of range' error instead of a 'cap out of range' error
-	// when someone does make([]T, bignumber). 'cap out of range' is true too,
-	// but since the cap is only being supplied implicitly, saying len is clearer.
+	// but it produces a 'len out of range' error instead of a 'cap out of range' error when someone does make([]T, bignumber).
+	// 'cap out of range' is true too, but since the cap is only being supplied implicitly, saying len is clearer.
 	// See issue 4085.
 	maxElements := maxSliceCap(et.size)
+	// 这个检查其实不是必需的
+	// 先需要检查的是长度，因为切片的长度需要比容量小
 	if len < 0 || uintptr(len) > maxElements {
 		panicmakeslicelen()
 	}
@@ -66,11 +71,12 @@ func makeslice(et *_type, len, cap int) slice {
 	if cap < len || uintptr(cap) > maxElements {
 		panicmakeslicecap()
 	}
-
+	// 分配空间
 	p := mallocgc(et.size*uintptr(cap), et, true)
 	return slice{p, len, cap}
 }
 
+// 使用了类型转换为什么还要这个方法
 func makeslice64(et *_type, len64, cap64 int64) slice {
 	len := int(len64)
 	if int64(len) != len64 {
@@ -85,14 +91,15 @@ func makeslice64(et *_type, len64, cap64 int64) slice {
 	return makeslice(et, len, cap)
 }
 
-// growslice handles slice growth during append.
+// growslice handles slice growth during append.动态增长切片
 // It is passed the slice element type, the old slice, and the desired new minimum capacity,
-// and it returns a new slice with at least that capacity, with the old data
-// copied into it.
+// and it returns a new slice with at least that capacity, with the old data copied into it.
+// 这段讲的是这个方法是根据元素的类型，老的切片，新的需要的最少的容量， 然后分配一个新的，将老的copy到新的中
 // The new slice's length is set to the old slice's length,
 // NOT to the new requested capacity.
 // This is for codegen convenience. The old slice's length is used immediately
 // to calculate where to write new values during an append.
+// 在写入得时候这个容量会被重新估计， 为了性能
 // TODO: When the old backend is gone, reconsider this decision.
 // The SSA backend might prefer the new length or to return only ptr/cap and save stack space.
 func growslice(et *_type, old slice, cap int) slice {
@@ -121,13 +128,11 @@ func growslice(et *_type, old slice, cap int) slice {
 		if old.len < 1024 {
 			newcap = doublecap
 		} else {
-			// Check 0 < newcap to detect overflow
-			// and prevent an infinite loop.
+			// Check 0 < newcap to detect overflow and prevent an infinite loop.
 			for 0 < newcap && newcap < cap {
 				newcap += newcap / 4
 			}
-			// Set newcap to the requested cap when
-			// the newcap calculation overflowed.
+			// Set newcap to the requested cap when the newcap calculation overflowed.
 			if newcap <= 0 {
 				newcap = cap
 			}
@@ -175,8 +180,8 @@ func growslice(et *_type, old slice, cap int) slice {
 	}
 
 	// The check of overflow (uintptr(newcap) > maxSliceCap(et.size))
-	// in addition to capmem > _MaxMem is needed to prevent an overflow
-	// which can be used to trigger a segfault on 32bit architectures
+	// in addition to capmem > _MaxMem is needed to prevent(防止) an overflow(溢出)
+	// which can be used to trigger(触发) a segfault(段错误) on 32bit architectures(架构)
 	// with this example program:
 	//
 	// type T [1<<27 + 1]int64
@@ -200,7 +205,7 @@ func growslice(et *_type, old slice, cap int) slice {
 		// Only clear the part that will not be overwritten.
 		memclrNoHeapPointers(add(p, newlenmem), capmem-newlenmem)
 	} else {
-		// Note: can't use rawmem (which avoids zeroing of memory), because then GC can scan uninitialized memory.
+		// Note: can't use rawmem (which avoids zeroing of memory避免内存归零), because then GC can scan uninitialized(未初始化) memory.
 		p = mallocgc(capmem, et, true)
 		if !writeBarrier.enabled {
 			memmove(p, old.array, lenmem)
@@ -218,6 +223,7 @@ func isPowerOfTwo(x uintptr) bool {
 	return x&(x-1) == 0
 }
 
+// 切片copy
 func slicecopy(to, fm slice, width uintptr) int {
 	if fm.len == 0 || to.len == 0 {
 		return 0

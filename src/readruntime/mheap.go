@@ -429,6 +429,7 @@ func arenaBase(i arenaIdx) uintptr {
 
 type arenaIdx uint
 
+// 取出的是l1对应的arena的下标
 func (i arenaIdx) l1() uint {
 	if arenaL1Bits == 0 {
 		// Let the compiler optimize this away if there's no L1 map.
