@@ -36,13 +36,13 @@ type hchan struct {
 	qcount   uint           // total data in the queue
 	dataqsiz uint           // size of the circular queue 循环数组的长度
 	buf      unsafe.Pointer // points to an array of dataqsiz elements 循环数组
-	elemsize uint16
-	closed   uint32
-	elemtype *_type // element type
-	sendx    uint   // send index 已发送元素在循环数组中的索引
-	recvx    uint   // receive index 已接收元素在循环数组中的索引
-	recvq    waitq  // list of recv waiters  读操作阻塞在channel的g队列
-	sendq    waitq  // list of send waiters  写操作阻塞在channel的g队列
+	elemsize uint16         // 元素大小
+	closed   uint32         // 关闭的标志
+	elemtype *_type         // element type， 元素类型
+	sendx    uint           // send index 已发送元素在循环数组中的索引
+	recvx    uint           // receive index 已接收元素在循环数组中的索引
+	recvq    waitq          // list of recv waiters  读操作阻塞在channel的g队列
+	sendq    waitq          // list of send waiters  写操作阻塞在channel的g队列
 
 	// lock protects all fields in hchan, as well as several fields in sudogs blocked on this channel.
 	//
