@@ -142,7 +142,9 @@ func chansend1(c *hchan, elem unsafe.Pointer) {
  * the operation; we'll see that it's now closed.
  */
 // 给通道发送数据分为三种情况
-//
+// 第一种：就是已经有了接收者在等待的时候，就直接将数据交给接收者
+// 第二种：没有接收者在等待，但是缓冲区没有满就将数据放入缓冲区
+// 第三种：没有接收者在等待并且，缓冲区满了，就将发送者进行阻塞
 func chansend(c *hchan, ep unsafe.Pointer, block bool, callerpc uintptr) bool {
 	// 向一个空的chan中发送数据，会使得goroutine阻塞
 	if c == nil {
@@ -193,14 +195,15 @@ func chansend(c *hchan, ep unsafe.Pointer, block bool, callerpc uintptr) bool {
 		unlock(&c.lock)
 		panic(plainError("send on closed channel"))
 	}
-
+	// Todo: 这里会不会存在一个问题就是，在缓冲区的数据，不能及时被使用，而是一直使用的是，刚发送过来的数据？
 	if sg := c.recvq.dequeue(); sg != nil {
+		// 这里表示发现了一个等待的接收者，这时可以绕过缓冲区，直接将数据发送给接收者
 		// Found a waiting receiver. We pass the value we want to send
 		// directly to the receiver, bypassing the channel buffer (if any).
 		send(c, sg, ep, func() { unlock(&c.lock) }, 3)
 		return true
 	}
-	// 如果缓冲区还有空间，
+	// 如果缓冲区还有空间，将数据放入缓冲区
 	if c.qcount < c.dataqsiz {
 		// Space is available in the channel buffer. Enqueue the element to send.
 		qp := chanbuf(c, c.sendx)
@@ -225,13 +228,13 @@ func chansend(c *hchan, ep unsafe.Pointer, block bool, callerpc uintptr) bool {
 
 	// Block on the channel. Some receiver will complete our operation for us.
 	gp := getg()
+	// 得到一个Sudog
 	mysg := acquireSudog()
 	mysg.releasetime = 0
 	if t0 != 0 {
 		mysg.releasetime = -1
 	}
-	// No stack splits between assigning elem and enqueuing mysg
-	// on gp.waiting where copystack can find it.
+	// No stack splits between assigning elem and enqueuing mysg on gp.waiting where copystack can find it.
 	mysg.elem = ep
 	mysg.waitlink = nil
 	mysg.g = gp
@@ -239,7 +242,9 @@ func chansend(c *hchan, ep unsafe.Pointer, block bool, callerpc uintptr) bool {
 	mysg.c = c
 	gp.waiting = mysg
 	gp.param = nil
+	// 进入队列，进行排队
 	c.sendq.enqueue(mysg)
+	// 让goroutine进入等待状态并且，解开锁
 	goparkunlock(&c.lock, waitReasonChanSend, traceEvGoBlockSend, 3)
 
 	// someone woke us up.
@@ -258,6 +263,7 @@ func chansend(c *hchan, ep unsafe.Pointer, block bool, callerpc uintptr) bool {
 		blockevent(mysg.releasetime-t0, 2)
 	}
 	mysg.c = nil
+	// 释放一个Sudog
 	releaseSudog(mysg)
 	return true
 }
