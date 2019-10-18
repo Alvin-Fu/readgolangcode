@@ -195,7 +195,6 @@ func chansend(c *hchan, ep unsafe.Pointer, block bool, callerpc uintptr) bool {
 		unlock(&c.lock)
 		panic(plainError("send on closed channel"))
 	}
-	// Todo: 这里会不会存在一个问题就是，在缓冲区的数据，不能及时被使用，而是一直使用的是，刚发送过来的数据？
 	if sg := c.recvq.dequeue(); sg != nil {
 		// 这里表示发现了一个等待的接收者，这时可以绕过缓冲区，直接将数据发送给接收者
 		// Found a waiting receiver. We pass the value we want to send
@@ -225,7 +224,7 @@ func chansend(c *hchan, ep unsafe.Pointer, block bool, callerpc uintptr) bool {
 		unlock(&c.lock)
 		return false
 	}
-
+	// 当缓冲区满的时候，则阻塞在通道上，当有接收者的时候，则将数据交给接收者，发送者这时就完成了操作
 	// Block on the channel. Some receiver will complete our operation for us.
 	gp := getg()
 	// 得到一个Sudog
@@ -270,7 +269,9 @@ func chansend(c *hchan, ep unsafe.Pointer, block bool, callerpc uintptr) bool {
 
 // send processes a send operation on an empty channel c.
 // The value ep sent by the sender is copied to the receiver sg.
+// 将发送方的数据复制到接收方
 // The receiver is then woken up to go on its merry way.
+// 然后将阻塞的接收者唤醒
 // Channel c must be empty and locked.  send unlocks c with unlockf.
 // sg must already be dequeued from c.
 // ep must be non-nil and point to the heap or the caller's stack.
@@ -304,6 +305,7 @@ func send(c *hchan, sg *sudog, ep unsafe.Pointer, unlockf func(), skip int) {
 	if sg.releasetime != 0 {
 		sg.releasetime = cputicks()
 	}
+	// goroutine进行准备
 	goready(gp, skip+1)
 }
 
@@ -316,7 +318,7 @@ func send(c *hchan, sg *sudog, ep unsafe.Pointer, unlockf func(), skip int) {
 // typedmemmove will call bulkBarrierPreWrite, but the target bytes
 // are not in the heap, so that will not help. We arrange to call
 // memmove and typeBitsBulkBarrier instead.
-
+// 直接发送， 用于没有缓冲或空缓冲的channel上发送
 func sendDirect(t *_type, sg *sudog, src unsafe.Pointer) {
 	// src is on our stack, dst is a slot on another stack.
 
@@ -330,6 +332,7 @@ func sendDirect(t *_type, sg *sudog, src unsafe.Pointer) {
 	memmove(dst, src, t.size)
 }
 
+// 直接接收
 func recvDirect(t *_type, sg *sudog, dst unsafe.Pointer) {
 	// dst is on our stack or the heap, src is on another stack.
 	// The channel is locked, so src will not move during this
@@ -339,6 +342,7 @@ func recvDirect(t *_type, sg *sudog, dst unsafe.Pointer) {
 	memmove(dst, src, t.size)
 }
 
+// 关闭channel
 func closechan(c *hchan) {
 	if c == nil {
 		panic(plainError("close of nil channel"))
@@ -359,7 +363,7 @@ func closechan(c *hchan) {
 	c.closed = 1
 
 	var glist *g
-
+	// 将所有的接收者和发送者搜释放
 	// release all readers
 	for {
 		sg := c.recvq.dequeue()
@@ -424,7 +428,9 @@ func chanrecv2(c *hchan, elem unsafe.Pointer) (received bool) {
 }
 
 // chanrecv receives on channel c and writes the received data to ep.
+// chanRecv 从channel中接收并将接收到的数据写入到ep中
 // ep may be nil, in which case received data is ignored.
+// ep可能是nil，这时收到的数据将会被忽略
 // If block == false and no elements are available, returns (false, false).
 // Otherwise, if c is closed, zeros *ep and returns (true, false).
 // Otherwise, fills in *ep with an element and returns (true, true).

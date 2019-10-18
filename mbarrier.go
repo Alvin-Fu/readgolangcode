@@ -14,7 +14,7 @@
 package runtime
 
 import (
-	"runtime/internal/sys"
+	"readruntime/internal/sys"
 	"unsafe"
 )
 
