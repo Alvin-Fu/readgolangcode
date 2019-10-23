@@ -15,6 +15,7 @@ type slice struct {
 	cap   int
 }
 
+// 不在GC堆上分配内存，常用在运行时用作低层次的内部结构，避免调度器和内存分配中的写屏障
 // An notInHeapSlice is a slice backed by go:notinheap memory.
 type notInHeapSlice struct {
 	array *notInHeap
@@ -24,6 +25,7 @@ type notInHeapSlice struct {
 
 // maxElems is a lookup table containing the maximum capacity for a slice.
 // The index is the size of the slice element.
+// 这个是元素大小和切片大小的对照表
 var maxElems = [...]uintptr{
 	^uintptr(0),
 	maxAlloc / 1, maxAlloc / 2, maxAlloc / 3, maxAlloc / 4,
@@ -37,7 +39,7 @@ var maxElems = [...]uintptr{
 }
 
 // maxSliceCap returns the maximum capacity for a slice.
-// 返回一个切片的最大容量
+// 返回一个切片的最大容量， 根据元素的大小
 func maxSliceCap(elemsize uintptr) uintptr {
 	if elemsize < uintptr(len(maxElems)) {
 		return maxElems[elemsize]
@@ -55,12 +57,13 @@ func panicmakeslicecap() {
 	panic(errorString("makeslice: cap out of range"))
 }
 
-// 创建一个切片
+// 创建一个切片， et表示一个元素的类型，即需要创建一个什么样的切片， 后面的是长度和容量
 func makeslice(et *_type, len, cap int) slice {
 	// NOTE: The len > maxElements check here is not strictly necessary,
 	// but it produces a 'len out of range' error instead of a 'cap out of range' error when someone does make([]T, bignumber).
 	// 'cap out of range' is true too, but since the cap is only being supplied implicitly, saying len is clearer.
 	// See issue 4085.
+	// 返回这类型元素可分配的切片的最大容量
 	maxElements := maxSliceCap(et.size)
 	// 这个检查其实不是必需的
 	// 先需要检查的是长度，因为切片的长度需要比容量小
@@ -100,8 +103,11 @@ func makeslice64(et *_type, len64, cap64 int64) slice {
 // This is for codegen convenience. The old slice's length is used immediately
 // to calculate where to write new values during an append.
 // 在写入得时候这个容量会被重新估计， 为了性能
+// 在运行过程中切片不够时自动增长
+//
 // TODO: When the old backend is gone, reconsider this decision.
 // The SSA backend might prefer the new length or to return only ptr/cap and save stack space.
+// 三个参数，et是元素类型，old是老的切片， cap是需要分配的容量，即指定的
 func growslice(et *_type, old slice, cap int) slice {
 	if raceenabled {
 		callerpc := getcallerpc()
@@ -120,7 +126,9 @@ func growslice(et *_type, old slice, cap int) slice {
 		return slice{unsafe.Pointer(&zerobase), old.len, cap}
 	}
 
+	//下面的代码就是，设置需要扩容的大小
 	newcap := old.cap
+	// 两倍之前的容量
 	doublecap := newcap + newcap
 	if cap > doublecap {
 		newcap = cap
@@ -129,10 +137,12 @@ func growslice(et *_type, old slice, cap int) slice {
 			newcap = doublecap
 		} else {
 			// Check 0 < newcap to detect overflow and prevent an infinite loop.
+			// 检查溢出，并且使得newcap尽可能的大一点
 			for 0 < newcap && newcap < cap {
 				newcap += newcap / 4
 			}
 			// Set newcap to the requested cap when the newcap calculation overflowed.
+			// 当老的切片溢出是，分配的容量为，指定的cap
 			if newcap <= 0 {
 				newcap = cap
 			}
@@ -145,6 +155,7 @@ func growslice(et *_type, old slice, cap int) slice {
 	// For 1 we don't need any division/multiplication.
 	// For sys.PtrSize, compiler will optimize division/multiplication into a shift by a constant.
 	// For powers of 2, use a variable shift.
+	// 对于不同大小
 	switch {
 	case et.size == 1:
 		lenmem = uintptr(old.len)

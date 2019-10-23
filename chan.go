@@ -33,7 +33,7 @@ const (
 // channel就是一个循环队列，加锁，轻量级的锁
 //
 type hchan struct {
-	qcount   uint           // total data in the queue
+	qcount   uint           // total data in the queue  队列中数据的数量
 	dataqsiz uint           // size of the circular queue 循环数组的长度
 	buf      unsafe.Pointer // points to an array of dataqsiz elements 循环数组
 	elemsize uint16         // 元素大小
@@ -489,21 +489,21 @@ func chanrecv(c *hchan, ep unsafe.Pointer, block bool) (selected, received bool)
 
 	if sg := c.sendq.dequeue(); sg != nil {
 		// Found a waiting sender. If buffer is size 0, receive value
-		// directly from sender. Otherwise, receive from head of queue
-		// and add sender's value to the tail of the queue (both map to
-		// the same buffer slot because the queue is full).
+		// directly(直接) from sender. Otherwise, receive from head of queue
+		// and add sender's value to the tail of the queue (both map to the same buffer slot because the queue is full).
 		recv(c, sg, ep, func() { unlock(&c.lock) }, 3)
 		return true, true
 	}
 
 	if c.qcount > 0 {
-		// Receive directly from queue
+		// Receive directly from queue， 直接从队列接收
 		qp := chanbuf(c, c.recvx)
 		if raceenabled {
 			raceacquire(qp)
 			racerelease(qp)
 		}
 		if ep != nil {
+			// 将内容复制，从ep到qp
 			typedmemmove(c.elemtype, ep, qp)
 		}
 		typedmemclr(c.elemtype, qp)
@@ -522,14 +522,14 @@ func chanrecv(c *hchan, ep unsafe.Pointer, block bool) (selected, received bool)
 	}
 
 	// no sender available: block on this channel.
+	// 没有发送者是则进行阻塞
 	gp := getg()
 	mysg := acquireSudog()
 	mysg.releasetime = 0
 	if t0 != 0 {
 		mysg.releasetime = -1
 	}
-	// No stack splits between assigning elem and enqueuing mysg
-	// on gp.waiting where copystack can find it.
+	// No stack splits between assigning elem and enqueuing mysg on gp.waiting where copystack can find it.
 	mysg.elem = ep
 	mysg.waitlink = nil
 	gp.waiting = mysg
@@ -559,12 +559,15 @@ func chanrecv(c *hchan, ep unsafe.Pointer, block bool) (selected, received bool)
 // There are 2 parts:
 // 1) The value sent by the sender sg is put into the channel
 //    and the sender is woken up to go on its merry way.
-// 2) The value received by the receiver (the current G) is
-//    written to ep.
-// For synchronous channels, both values are the same.
+// 2) The value received by the receiver (the current G) is written to ep.
+// 接收操作分为两步，发送者将数据发送给channel然后发送者就完成了
+// 数据将被复制到接收者的ep中
+//
+// For synchronous channels, both values are the same. 同步的channel这两步是用时发生
 // For asynchronous channels, the receiver gets its data from
 // the channel buffer and the sender's data is put in the
 // channel buffer.
+// 异步的是发送者将数据放到缓冲区，接收者从缓冲区区取数据
 // Channel c must be full and locked. recv unlocks c with unlockf.
 // sg must already be dequeued from c.
 // A non-nil ep must point to the heap or the caller's stack.
@@ -578,10 +581,10 @@ func recv(c *hchan, sg *sudog, ep unsafe.Pointer, unlockf func(), skip int) {
 			recvDirect(c.elemtype, sg, ep)
 		}
 	} else {
-		// Queue is full. Take the item at the
-		// head of the queue. Make the sender enqueue
-		// its item at the tail of the queue. Since the
-		// queue is full, those are both the same slot.
+		// Queue is full. Take the item at the head of the queue.
+		// Make the sender enqueue its item at the tail of the queue.
+		// Since the queue is full, those are both the same slot.
+		// 由于缓冲队列是一个循环队列，如果队列满了以后，如何保证里面的可以被取到？
 		qp := chanbuf(c, c.recvx)
 		if raceenabled {
 			raceacquire(qp)
@@ -591,9 +594,11 @@ func recv(c *hchan, sg *sudog, ep unsafe.Pointer, unlockf func(), skip int) {
 		}
 		// copy data from queue to receiver
 		if ep != nil {
+			// 复制ep中的数据到qp中， 到接收者
 			typedmemmove(c.elemtype, ep, qp)
 		}
 		// copy data from sender to queue
+		// 将数据复制到队列中
 		typedmemmove(c.elemtype, qp, sg.elem)
 		c.recvx++
 		if c.recvx == c.dataqsiz {
@@ -608,6 +613,7 @@ func recv(c *hchan, sg *sudog, ep unsafe.Pointer, unlockf func(), skip int) {
 	if sg.releasetime != 0 {
 		sg.releasetime = cputicks()
 	}
+	// 准备goroutine跑
 	goready(gp, skip+1)
 }
 
@@ -708,6 +714,7 @@ func reflect_chanclose(c *hchan) {
 	closechan(c)
 }
 
+// 进入队列
 func (q *waitq) enqueue(sgp *sudog) {
 	sgp.next = nil
 	x := q.last
@@ -722,6 +729,7 @@ func (q *waitq) enqueue(sgp *sudog) {
 	q.last = sgp
 }
 
+// 退出队列
 func (q *waitq) dequeue() *sudog {
 	for {
 		sgp := q.first
@@ -738,11 +746,9 @@ func (q *waitq) dequeue() *sudog {
 			sgp.next = nil // mark as removed (see dequeueSudog)
 		}
 
-		// if a goroutine was put on this queue because of a
-		// select, there is a small window between the goroutine
-		// being woken up by a different case and it grabbing the
-		// channel locks. Once it has the lock
-		// it removes itself from the queue, so we won't see it after that.
+		// if a goroutine was put on this queue because of a select,
+		// there is a small window between the goroutine being woken up by a different case and it grabbing the channel locks.
+		// Once it has the lock it removes itself from the queue, so we won't see it after that.
 		// We use a flag in the G struct to tell us when someone
 		// else has won the race to signal this goroutine but the goroutine
 		// hasn't removed itself from the queue yet.
@@ -760,8 +766,7 @@ func (c *hchan) raceaddr() unsafe.Pointer {
 	// Treat read-like and write-like operations on the channel to
 	// happen at this address. Avoid using the address of qcount
 	// or dataqsiz, because the len() and cap() builtins read
-	// those addresses, and we don't want them racing with
-	// operations like close().
+	// those addresses, and we don't want them racing with operations like close().
 	return unsafe.Pointer(&c.buf)
 }
 
