@@ -150,12 +150,13 @@ func growslice(et *_type, old slice, cap int) slice {
 	}
 
 	var overflow bool
+	// 这三个参数分别是老的切片的大小， 新的切片大小，容量
 	var lenmem, newlenmem, capmem uintptr
 	// Specialize for common values of et.size.
 	// For 1 we don't need any division/multiplication.
 	// For sys.PtrSize, compiler will optimize division/multiplication into a shift by a constant.
 	// For powers of 2, use a variable shift.
-	// 对于不同大小
+	// 对于不同大小的元素的扩容方式不同，主要是将乘法变成移位操作
 	switch {
 	case et.size == 1:
 		lenmem = uintptr(old.len)
@@ -210,13 +211,17 @@ func growslice(et *_type, old slice, cap int) slice {
 
 	var p unsafe.Pointer
 	if et.kind&kindNoPointers != 0 {
+		// 进行内存分配
 		p = mallocgc(capmem, nil, false)
+		// 将老的数组数组拷贝给新的数组，个数为lenmem
 		memmove(p, old.array, lenmem)
 		// The append() that calls growslice is going to overwrite from old.len to cap (which will be the new length).
 		// Only clear the part that will not be overwritten.
+		// 清理没有数据的那部分就是长度到容量的那部分
 		memclrNoHeapPointers(add(p, newlenmem), capmem-newlenmem)
 	} else {
-		// Note: can't use rawmem (which avoids zeroing of memory避免内存归零), because then GC can scan uninitialized(未初始化) memory.
+		// Note: can't use rawmem (which avoids zeroing of memory避免内存归零),
+		// because then GC can scan uninitialized(未初始化) memory.
 		p = mallocgc(capmem, et, true)
 		if !writeBarrier.enabled {
 			memmove(p, old.array, lenmem)
