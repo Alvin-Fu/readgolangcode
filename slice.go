@@ -160,6 +160,7 @@ func growslice(et *_type, old slice, cap int) slice {
 	case et.size == 1:
 		lenmem = uintptr(old.len)
 		newlenmem = uintptr(cap)
+		// 返回malloc要分配的内存大小
 		capmem = roundupsize(uintptr(newcap))
 		overflow = uintptr(newcap) > maxAlloc
 		newcap = int(capmem)
@@ -214,6 +215,7 @@ func growslice(et *_type, old slice, cap int) slice {
 		memmove(p, old.array, lenmem)
 		// The append() that calls growslice is going to overwrite from old.len to cap (which will be the new length).
 		// Only clear the part that will not be overwritten.
+		// 清除
 		memclrNoHeapPointers(add(p, newlenmem), capmem-newlenmem)
 	} else {
 		// Note: can't use rawmem (which avoids zeroing of memory避免内存归零), because then GC can scan uninitialized(未初始化) memory.
@@ -248,7 +250,7 @@ func slicecopy(to, fm slice, width uintptr) int {
 	if width == 0 {
 		return n
 	}
-
+	//判断是否进行竞争检测
 	if raceenabled {
 		callerpc := getcallerpc()
 		pc := funcPC(slicecopy)
@@ -262,9 +264,11 @@ func slicecopy(to, fm slice, width uintptr) int {
 
 	size := uintptr(n) * width
 	if size == 1 { // common case worth about 2x to do here
+		// 进行赋值操作
 		// TODO: is this still worth it with new memmove impl?
 		*(*byte)(to.array) = *(*byte)(fm.array) // known to be a byte pointer
 	} else {
+		// 将fm中的size这copy到to中
 		memmove(to.array, fm.array, size)
 	}
 	return n
@@ -288,7 +292,7 @@ func slicestringcopy(to []byte, fm string) int {
 	if msanenabled {
 		msanwrite(unsafe.Pointer(&to[0]), uintptr(n))
 	}
-
+	//拷贝字符串到字节数组中
 	memmove(unsafe.Pointer(&to[0]), stringStructOf(&fm).str, uintptr(n))
 	return n
 }
