@@ -83,9 +83,11 @@ func makechan(t *chantype, size int) *hchan {
 	elem := t.elem
 
 	// compiler(编译器) checks this but be safe.
+	// 检查元素的尺寸是否超过大小即65536
 	if elem.size >= 1<<16 {
 		throw("makechan: invalid channel element type")
 	}
+	//检查对齐方式
 	if hchanSize%maxAlign != 0 || elem.align > maxAlign {
 		throw("makechan: bad alignment")
 	}
@@ -105,6 +107,8 @@ func makechan(t *chantype, size int) *hchan {
 		// Queue or element size is zero. 无缓存的chan
 		c = (*hchan)(mallocgc(hchanSize, nil, true))
 		// Race detector uses this location for synchronization.
+		// 这里进行竟态检测的同步，主要是为了防止直接操作qcount和dataqsize，
+		// 因此使用这个指针
 		c.buf = c.raceaddr()
 	case elem.kind&kindNoPointers != 0:
 		// Elements do not contain pointers.
@@ -113,7 +117,7 @@ func makechan(t *chantype, size int) *hchan {
 		c = (*hchan)(mallocgc(hchanSize+uintptr(size)*elem.size, nil, true))
 		c.buf = add(unsafe.Pointer(c), hchanSize)
 	default:
-		// Elements contain pointers.
+		// Elements contain pointers.包含指针的情况
 		c = new(hchan)
 		c.buf = mallocgc(uintptr(size)*elem.size, elem, true)
 	}
