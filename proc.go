@@ -6,8 +6,8 @@ package runtime
 
 import (
 	"internal/cpu"
-	"runtime/internal/atomic"
-	"runtime/internal/sys"
+	"readruntime/internal/atomic"
+	"readruntime/internal/sys"
 	"unsafe"
 )
 
@@ -276,7 +276,7 @@ func goschedguarded() {
 }
 
 // Puts the current goroutine into a waiting state and calls unlockf.
-// If unlockf returns false, the goroutine is resumed.
+// If unlockf returns false, the goroutine is resumed(恢复).
 // unlockf must not access this G's stack, as it may be moved between
 // the call to gopark and the call to unlockf.
 // Reason explains why the goroutine has been parked.
