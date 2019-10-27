@@ -6,7 +6,7 @@ type Tmp struct {
 	a, b int
 }
 const num1, num2 = 100, 200
-//go:inline
+//go:noinline
 func Cen(t *Tmp){
 	t.a = num1 + num2
 	t.b = num2 - num1
