@@ -5,12 +5,13 @@
 package runtime
 
 import (
-	"runtime/internal/atomic"
+	"readruntime/internal/atomic"
 	"unsafe"
 )
 
 // These functions cannot have go:noescape annotations,
 // because while ptr does not escape, new does.
+// 这些方法不能有go:noescape的注释，因为这些指针不能进行逃逸在创建时
 // If new is marked as not escaping, the compiler will make incorrect
 // escape analysis decisions about the pointer value being stored.
 // Instead, these are wrappers around the actual atomics (casp1 and so on)

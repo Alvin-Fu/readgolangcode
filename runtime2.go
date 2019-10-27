@@ -5,8 +5,8 @@
 package runtime
 
 import (
-	"runtime/internal/atomic"
-	"runtime/internal/sys"
+	"readruntime/internal/atomic"
+	"readruntime/internal/sys"
 	"unsafe"
 )
 
@@ -272,20 +272,24 @@ type gobuf struct {
 	bp   uintptr // for GOEXPERIMENT=framepointer
 }
 
-// sudog represents a g in a wait list, such as for sending/receiving on a channel.
+// sudog represents(表示) a g in a wait list, 表示一个g的等待列表
+// such as for sending/receiving on a channel. 如channel的接收和发送队列
 //
+// 下面的是在描述为什么需要这个sudogs的，主要是go的模型中g和同步对象是多对多的
 // sudog is necessary because the g ↔ synchronization object relation
 // is many-to-many. A g can be on many wait lists, so there may be
 // many sudogs for one g; and many gs may be waiting on the same
 // synchronization object, so there may be many sudogs for one object.
 //
-// sudogs are allocated from a special pool. Use acquireSudog and
-// releaseSudog to allocate and free them.
+// sudogs are allocated(分配) from a special pool. Use acquireSudog and
+// releaseSudog to allocate(分配) and free(释放) them.
 // 就是对g结构的封装
 type sudog struct {
 	// The following fields are protected by the hchan.lock of the
 	// channel this sudog is blocking on. shrinkstack depends on
 	// this for sudogs involved in channel ops.
+	// sudog在使用的时候，内部的数据是被hchan.lock保护的，
+	// 当sudogs有参与到channel的操作时
 
 	g *g
 
@@ -328,22 +332,23 @@ type wincallbackcontext struct {
 }
 
 // Stack describes a Go execution stack.
-// The bounds of the stack are exactly [lo, hi),
-// with no implicit data structures on either side.
+// The bounds(界限) of the stack are exactly(精确的) [lo, hi),
+// with no implicit(隐藏的) data structures on either side(方面).
 type stack struct {
-	lo uintptr
-	hi uintptr
+	lo uintptr			// 表示低地址
+	hi uintptr			// 表示高地址
 }
 
 type g struct {
 	// Stack parameters.
 	// stack describes the actual stack memory: [stack.lo, stack.hi).
 	// stackguard0 is the stack pointer compared in the Go stack growth prologue.
-	// It is stack.lo+StackGuard normally, but can be StackPreempt to trigger a preemption.
+	// It is stack.lo+StackGuard normally,
+	// but can be StackPreempt to trigger a preemption.
 	// stackguard1 is the stack pointer compared in the C stack growth prologue.
 	// It is stack.lo+StackGuard on g0 and gsignal stacks.
 	// It is ~0 on other goroutine stacks, to trigger a call to morestackc (and crash).
-	stack       stack   // offset known to runtime/cgo
+	stack       stack   // offset known to runtime/cgo  cgo知道运行时的偏移量
 	stackguard0 uintptr // offset known to liblink
 	stackguard1 uintptr // offset known to liblink
 

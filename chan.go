@@ -8,15 +8,19 @@ package runtime
 // This file contains the implementation of Go channels.
 
 // Invariants:
+// 下面主要是讲了一些channel不变的特性，其中主要是说了接收和发送的阻塞和select的使用
+//  主要描述，发送和接收的队列中至少会有一个是空的
 //  At least one of c.sendq and c.recvq is empty,
 //  except for the case of an unbuffered channel with a single goroutine
 //  blocked on it for both sending and receiving using a select statement,
 //  in which case the length of c.sendq and c.recvq is limited only by the
 //  size of the select statement.
-//
+// 下面的是一个有缓存的channel的例子
 // For buffered channels, also:
 //  c.qcount > 0 implies that c.recvq is empty.
+//  队列中数据的长度大于0则是读操作的等待队列为空
 //  c.qcount < c.dataqsiz implies that c.sendq is empty.
+// 队列数据的长度小于循环数组的长度，表示写操作的等待队列为空
 
 import (
 	"readruntime/internal/atomic"
@@ -24,8 +28,11 @@ import (
 )
 
 const (
+	// 对齐方式
 	maxAlign  = 8
+	// hchan的大小
 	hchanSize = unsafe.Sizeof(hchan{}) + uintptr(-int(unsafe.Sizeof(hchan{}))&(maxAlign-1))
+	// 是否进行debug
 	debugChan = false
 )
 
@@ -50,12 +57,13 @@ type hchan struct {
 	// as this can deadlock with stack shrinking.
 	lock mutex
 }
-
+// 等待队列的结构体
 type waitq struct {
 	first *sudog
 	last  *sudog
 }
 
+// 这个方法是实现reflect/value.go 2490行的函数声明
 //go:linkname reflect_makechan reflect.makechan
 func reflect_makechan(t *chantype, size int) *hchan {
 	return makechan(t, size)
