@@ -224,10 +224,12 @@ func growslice(et *_type, old slice, cap int) slice {
 		// Note: can't use rawmem (which avoids zeroing of memory避免内存归零),
 		// because then GC can scan uninitialized(未初始化) memory.
 		p = mallocgc(capmem, et, true)
+		// 这个是写屏障用到的，一个判断，即是否允许写屏障
 		if !writeBarrier.enabled {
 			memmove(p, old.array, lenmem)
 		} else {
 			for i := uintptr(0); i < lenmem; i += et.size {
+				// 将类型为et的值从后一个拷贝到前一个
 				typedmemmove(et, add(p, i), add(old.array, i))
 			}
 		}
