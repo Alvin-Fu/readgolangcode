@@ -70,6 +70,7 @@ func reflect_makechan(t *chantype, size int) *hchan {
 }
 
 func makechan64(t *chantype, size int64) *hchan {
+	// 判断size的值是不是大于当前系统的最大数字
 	if int64(int(size)) != size {
 		panic(plainError("makechan: size out of range"))
 	}
