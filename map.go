@@ -5,34 +5,34 @@
 package runtime
 
 // This file contains the implementation of Go's map type.
+// 这个文件包含了go中map的实现
 //
-// A map is just a hash table. The data is arranged
-// into an array of buckets. Each bucket contains up to
-// 8 key/value pairs. The low-order bits of the hash are
-// used to select a bucket. Each bucket contains a few
-// high-order bits of each hash to distinguish the entries
-// within a single bucket.
+// A map is just a hash table.
+// The data is arranged into an array of buckets.
+//  数据是有被安排成桶的数组
+// Each bucket contains up to 8 key/value pairs.
+// 每个桶最多包含了8对key/value
+// The low-order bits of the hash are used to select a bucket.
+// 哈希的低阶位用于查询在这个桶
+// Each bucket contains a few high-order bits of each hash to distinguish the entries within a single bucket.
+// 每个桶包含了hash的高阶位,用于区分单个桶中的条目
+// If more than 8 keys hash to a bucket, we chain on extra buckets.
 //
-// If more than 8 keys hash to a bucket, we chain on
-// extra buckets.
-//
-// When the hashtable grows, we allocate a new array
-// of buckets twice as big. Buckets are incrementally
-// copied from the old bucket array to the new bucket array.
-//
-// Map iterators walk through the array of buckets and
-// return the keys in walk order (bucket #, then overflow
-// chain order, then bucket index).  To maintain iteration
-// semantics, we never move keys within their bucket (if
-// we did, keys might be returned 0 or 2 times).  When
-// growing the table, iterators remain iterating through the
-// old table and must check the new table if the bucket
-// they are iterating through has been moved ("evacuated")
-// to the new table.
+// When the hashtable grows, we allocate a new array of buckets twice as big.
+// 当map在增长的时候,桶满的时候会分配原理的2倍的大小的数组
+// Buckets are incrementally copied from the old bucket array to the new bucket array.
+// 数据的copy是增量式的,不是全部一次性copy
+// Map iterators walk through the array of buckets and return the keys in walk order
+// (bucket #, then overflow chain order, then bucket index).
+// map在遍历桶的时候按照遍历的顺序返回key值(顺序是 bucket, )
+// To maintain iteration semantics, we never move keys within their bucket (if we did, keys might be returned 0 or 2 times).
+// 在遍历的过程中是不会改变顺序的
+// When growing the table, iterators remain iterating through the old table and must check the new table if the bucket
+// they are iterating through has been moved ("evacuated") to the new table.
+// 当map在增长的过程的时候,是遍历老的表,并且,当老的表是空的时候会去检查新的表
 
-// Picking loadFactor: too large and we have lots of overflow
-// buckets, too small and we waste a lot of space. I wrote
-// a simple program to check some stats for different loads:
+// Picking loadFactor: too large and we have lots of overflow buckets, too small and we waste a lot of space.
+// I wrote a simple program to check some stats for different loads:
 // (64-bit, 8 byte keys and values)
 //  loadFactor    %overflow  bytes/entry     hitprobe    missprobe
 //        4.00         2.13        20.77         3.00         4.00
@@ -47,24 +47,26 @@ package runtime
 //
 // %overflow   = percentage of buckets which have an overflow bucket
 // bytes/entry = overhead bytes used per key/value pair
-// hitprobe    = # of entries to check when looking up a present key
-// missprobe   = # of entries to check when looking up an absent key
+// hitprobe    = # of entries to check when looking up a present key 查找当前键要检查的项
+// missprobe   = # of entries to check when looking up an absent key 查找一个不存在的key要检查的条数
 //
-// Keep in mind this data is for maximally loaded tables, i.e. just
-// before the table grows. Typical tables will be somewhat less loaded.
+// Keep in mind this data is for maximally loaded tables, i.e. just before the table grows.
+// Typical tables will be somewhat less loaded.
 
 import (
-	"runtime/internal/atomic"
-	"runtime/internal/sys"
+	"readruntime/internal/atomic"
+	"readruntime/internal/sys"
 	"unsafe"
 )
 
 const (
 	// Maximum number of key/value pairs a bucket can hold.
+	// 一个桶可以容纳的键值对的最大数目
 	bucketCntBits = 3
 	bucketCnt     = 1 << bucketCntBits
 
 	// Maximum average load of a bucket that triggers growth is 6.5.
+	// 一个桶的最大平均负载
 	// Represent as loadFactorNum/loadFactDen, to allow integer math.
 	loadFactorNum = 13
 	loadFactorDen = 2
@@ -108,25 +110,27 @@ const (
 type hmap struct {
 	// Note: the format of the hmap is also encoded in cmd/compile/internal/gc/reflect.go.
 	// Make sure this stays in sync with the compiler's definition.
-	count     int // # live cells == size of map.  Must be first (used by len() builtin)
+	count     int // # live cells == size of map.  Must be first (used by len() builtin) 元素个数
 	flags     uint8
 	B         uint8  // log_2 of # of buckets (can hold up to loadFactor * 2^B items)
 	noverflow uint16 // approximate number of overflow buckets; see incrnoverflow for details
-	hash0     uint32 // hash seed
+	hash0     uint32 // hash seed 哈希种子
 
 	buckets    unsafe.Pointer // array of 2^B Buckets. may be nil if count==0.
 	oldbuckets unsafe.Pointer // previous bucket array of half the size, non-nil only when growing
 	nevacuate  uintptr        // progress counter for evacuation (buckets less than this have been evacuated)
-
+	// 将包含指针的信息保存起来,使得gc在扫描的时候不会去扫描整个map
 	extra *mapextra // optional fields
 }
 
 // mapextra holds fields that are not present on all maps.
 type mapextra struct {
-	// If both key and value do not contain pointers and are inline, then we mark bucket
-	// type as containing no pointers. This avoids scanning such maps.
-	// However, bmap.overflow is a pointer. In order to keep overflow buckets
-	// alive, we store pointers to all overflow buckets in hmap.extra.overflow and hmap.extra.oldoverflow.
+	// If both key and value do not contain pointers and are inline, then we mark bucket type as containing no pointers.
+	// 如果这个key和value是不包含指针或者内联的,我们标记这个桶是不包含指针的
+	// This avoids scanning such maps.
+	// 避免扫描每一个桶
+	// However, bmap.overflow is a pointer. In order to keep overflow buckets alive,
+	// we store pointers to all overflow buckets in hmap.extra.overflow and hmap.extra.oldoverflow.
 	// overflow and oldoverflow are only used if key and value do not contain pointers.
 	// overflow contains overflow buckets for hmap.buckets.
 	// oldoverflow contains overflow buckets for hmap.oldbuckets.
@@ -140,20 +144,19 @@ type mapextra struct {
 
 // A bucket for a Go map.
 type bmap struct {
-	// tophash generally contains the top byte of the hash value
-	// for each key in this bucket. If tophash[0] < minTopHash,
-	// tophash[0] is a bucket evacuation state instead.
+	// tophash generally contains the top byte of the hash value for each key in this bucket.
+	// If tophash[0] < minTopHash, tophash[0] is a bucket evacuation state instead.
+	// 这个就限定了一个桶可容纳的键值对的数量
 	tophash [bucketCnt]uint8
 	// Followed by bucketCnt keys and then bucketCnt values.
-	// NOTE: packing all the keys together and then all the values together makes the
-	// code a bit more complicated than alternating key/value/key/value/... but it allows
-	// us to eliminate padding which would be needed for, e.g., map[int64]int8.
+	// NOTE: packing all the keys together and then all the values together makes the code a bit more complicated than alternating key/value/key/value/...
+	// but it allows us to eliminate padding which would be needed for, e.g., map[int64]int8.
 	// Followed by an overflow pointer.
 }
 
 // A hash iteration structure.
-// If you modify hiter, also change cmd/compile/internal/gc/reflect.go to indicate
-// the layout of this structure.
+// If you modify hiter, also change cmd/compile/internal/gc/reflect.go to indicate the layout of this structure.
+// map的迭代结构
 type hiter struct {
 	key         unsafe.Pointer // Must be in first position.  Write nil to indicate iteration end (see cmd/internal/gc/range.go).
 	value       unsafe.Pointer // Must be in second position (see cmd/internal/gc/range.go).
@@ -186,6 +189,7 @@ func bucketMask(b uint8) uintptr {
 }
 
 // tophash calculates the tophash value for hash.
+// 计算hash的值
 func tophash(hash uintptr) uint8 {
 	top := uint8(hash >> (sys.PtrSize*8 - 8))
 	if top < minTopHash {
@@ -194,6 +198,7 @@ func tophash(hash uintptr) uint8 {
 	return top
 }
 
+//
 func evacuated(b *bmap) bool {
 	h := b.tophash[0]
 	return h > empty && h < minTopHash
@@ -213,6 +218,7 @@ func (b *bmap) keys() unsafe.Pointer {
 
 // incrnoverflow increments h.noverflow.
 // noverflow counts the number of overflow buckets.
+// 计算溢出桶的数量
 // This is used to trigger same-size map growth.
 // See also tooManyOverflowBuckets.
 // To keep hmap small, noverflow is a uint16.
@@ -291,6 +297,7 @@ func makemap_small() *hmap {
 }
 
 // makemap implements Go map creation for make(map[k]v, hint).
+// 创建一个map
 // If the compiler has determined that the map or the first bucket
 // can be created on the stack, h and/or bucket may be non-nil.
 // If h != nil, the map can be created directly in h.
@@ -330,16 +337,16 @@ func makemap(t *maptype, hint int, h *hmap) *hmap {
 
 // makeBucketArray initializes a backing array for map buckets.
 // 1<<b is the minimum number of buckets to allocate.
-// dirtyalloc should either be nil or a bucket array previously
-// allocated by makeBucketArray with the same t and b parameters.
-// If dirtyalloc is nil a new backing array will be alloced and
-// otherwise dirtyalloc will be cleared and reused as backing array.
+// dirtyalloc should either be nil or a bucket array previously allocated by makeBucketArray with the same t and b parameters.
+// If dirtyalloc is nil a new backing array will be alloced and otherwise dirtyalloc will be cleared and reused as backing array.
 func makeBucketArray(t *maptype, b uint8, dirtyalloc unsafe.Pointer) (buckets unsafe.Pointer, nextOverflow *bmap) {
 	base := bucketShift(b)
 	nbuckets := base
 	// For small b, overflow buckets are unlikely.
 	// Avoid the overhead of the calculation.
+	// 如果b小于4的时候就不需要进行计算了，因为不会溢出
 	if b >= 4 {
+		// 这个里面就是检查malloc可分配的内存和需要分配的内存是否一致
 		// Add on the estimated number of overflow buckets
 		// required to insert the median number of elements
 		// used with this value of b.
@@ -350,7 +357,7 @@ func makeBucketArray(t *maptype, b uint8, dirtyalloc unsafe.Pointer) (buckets un
 			nbuckets = up / t.bucket.size
 		}
 	}
-
+	// 如果这个是新的array就直接分配，如果有老的桶就需要
 	if dirtyalloc == nil {
 		buckets = newarray(t.bucket, int(nbuckets))
 	} else {
@@ -359,18 +366,19 @@ func makeBucketArray(t *maptype, b uint8, dirtyalloc unsafe.Pointer) (buckets un
 		// but may not be empty.
 		buckets = dirtyalloc
 		size := t.bucket.size * nbuckets
+		// 主要是区别是否是指针类型
 		if t.bucket.kind&kindNoPointers == 0 {
 			memclrHasPointers(buckets, size)
 		} else {
 			memclrNoHeapPointers(buckets, size)
 		}
 	}
-
+	// 如果需要分配的和实际分配的不相等则会分配一下溢出的buckets
 	if base != nbuckets {
 		// We preallocated some overflow buckets.
 		// To keep the overhead of tracking these overflow buckets to a minimum,
-		// we use the convention that if a preallocated overflow bucket's overflow
-		// pointer is nil, then there are more available by bumping the pointer.
+		// we use the convention that if a preallocated overflow bucket's overflow pointer is nil,
+		// then there are more available by bumping the pointer.
 		// We need a safe non-nil pointer for the last overflow bucket; just use buckets.
 		nextOverflow = (*bmap)(add(buckets, base*uintptr(t.bucketsize)))
 		last := (*bmap)(add(buckets, (nbuckets-1)*uintptr(t.bucketsize)))

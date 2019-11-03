@@ -29,7 +29,7 @@ import (
 
 const (
 	// 对齐方式
-	maxAlign  = 8
+	maxAlign = 8
 	// hchan的大小
 	hchanSize = unsafe.Sizeof(hchan{}) + uintptr(-int(unsafe.Sizeof(hchan{}))&(maxAlign-1))
 	// 是否进行debug
@@ -57,6 +57,7 @@ type hchan struct {
 	// as this can deadlock with stack shrinking.
 	lock mutex
 }
+
 // 等待队列的结构体
 type waitq struct {
 	first *sudog
@@ -340,8 +341,7 @@ func sendDirect(t *_type, sg *sudog, src unsafe.Pointer) {
 	// So make sure that no preemption points can happen between read & use.
 	dst := sg.elem
 	typeBitsBulkBarrier(t, uintptr(dst), uintptr(src), t.size)
-	// No need for cgo write barrier checks because dst is always
-	// Go memory.
+	// No need for cgo write barrier checks because dst is always Go memory.
 	memmove(dst, src, t.size)
 }
 
