@@ -310,6 +310,7 @@ func send(c *hchan, sg *sudog, ep unsafe.Pointer, unlockf func(), skip int) {
 		}
 	}
 	if sg.elem != nil {
+		// 已经将elem赋值给了ep了，因此这时候sg的elem指向了空，在后面会将sg回收掉
 		sendDirect(c.elemtype, sg, ep)
 		sg.elem = nil
 	}

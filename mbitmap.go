@@ -688,10 +688,8 @@ func bulkBarrierBitmap(dst, src, size, maskOffset uintptr, bits *uint8) {
 	}
 }
 
-// typeBitsBulkBarrier executes a write barrier for every
-// pointer that would be copied from [src, src+size) to [dst,
-// dst+size) by a memmove using the type bitmap to locate those
-// pointer slots.
+// typeBitsBulkBarrier executes a write barrier for every pointer that would be copied from
+// [src, src+size) to [dst, dst+size) by a memmove using the type bitmap to locate those pointer slots.
 //
 // The type typ must correspond exactly to [src, src+size) and [dst, dst+size).
 // dst, src, and size must be pointer-aligned.

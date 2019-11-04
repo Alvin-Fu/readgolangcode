@@ -115,8 +115,9 @@ type hmap struct {
 	B         uint8  // log_2 of # of buckets (can hold up to loadFactor * 2^B items)
 	noverflow uint16 // approximate number of overflow buckets; see incrnoverflow for details
 	hash0     uint32 // hash seed 哈希种子
-
-	buckets    unsafe.Pointer // array of 2^B Buckets. may be nil if count==0.
+	// buckets是一个bucket的数组，每一个bucket中存放的是一个bmap，其中买个bmap中可以存8个key-value
+	buckets unsafe.Pointer // array of 2^B Buckets. may be nil if count==0.
+	// 扩容的时候使用，表示的是老的那个buckets
 	oldbuckets unsafe.Pointer // previous bucket array of half the size, non-nil only when growing
 	nevacuate  uintptr        // progress counter for evacuation (buckets less than this have been evacuated)
 	// 将包含指针的信息保存起来,使得gc在扫描的时候不会去扫描整个map
@@ -124,6 +125,7 @@ type hmap struct {
 }
 
 // mapextra holds fields that are not present on all maps.
+// 保存了并非在所有的map中都显示的字段，主要是在内联并且key和value中不包含指针的情况下使用
 type mapextra struct {
 	// If both key and value do not contain pointers and are inline, then we mark bucket type as containing no pointers.
 	// 如果这个key和value是不包含指针或者内联的,我们标记这个桶是不包含指针的
@@ -135,10 +137,11 @@ type mapextra struct {
 	// overflow contains overflow buckets for hmap.buckets.
 	// oldoverflow contains overflow buckets for hmap.oldbuckets.
 	// The indirection allows to store a pointer to the slice in hiter.
-	overflow    *[]*bmap
-	oldoverflow *[]*bmap
+	overflow    *[]*bmap // 指向的是后面的溢出桶
+	oldoverflow *[]*bmap // 扩容的时候使用
 
 	// nextOverflow holds a pointer to a free overflow bucket.
+	// 指向空闲的 overflow bucket的指针
 	nextOverflow *bmap
 }
 
@@ -148,6 +151,7 @@ type bmap struct {
 	// If tophash[0] < minTopHash, tophash[0] is a bucket evacuation state instead.
 	// 这个就限定了一个桶可容纳的键值对的数量
 	tophash [bucketCnt]uint8
+	// 实际中每一个bmap中都会有一个overflow指向下一个bmap
 	// Followed by bucketCnt keys and then bucketCnt values.
 	// NOTE: packing all the keys together and then all the values together makes the code a bit more complicated than alternating key/value/key/value/...
 	// but it allows us to eliminate padding which would be needed for, e.g., map[int64]int8.
