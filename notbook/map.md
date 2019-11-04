@@ -21,5 +21,5 @@ type hmap struct {
 结构中 
 	1. buckets是一个数组， 每一个后面会有一个bmap的链表，其中每一个bmap中最对只能保存
 	2. oldbuckets 只是在扩容的时候使用
-	3. extra表示
+	3. extra表示的是在
        

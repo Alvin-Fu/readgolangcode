@@ -125,7 +125,7 @@ type hmap struct {
 }
 
 // mapextra holds fields that are not present on all maps.
-// 保存了并非在所有的map中都显示的字段，主要是在内联并且key和value中不包含指针的情况下使用
+// 保存了并非在所有的map中都显示的字段，内联并且key和value中不包含指针的情况下使用
 type mapextra struct {
 	// If both key and value do not contain pointers and are inline, then we mark bucket type as containing no pointers.
 	// 如果这个key和value是不包含指针或者内联的,我们标记这个桶是不包含指针的
