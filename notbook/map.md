@@ -18,4 +18,4 @@ type hmap struct {
 }
 
 ```
-结构中 buckets是一个数组， 每一个后面会有一个bmap的链表，其中每一个bmap中最对只能保存
+结构中 buckets是一个数组， 每一个后面会有一个bmap的链表，其中每一个bmap中最对只能保存8对kye/value
