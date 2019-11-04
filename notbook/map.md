@@ -18,4 +18,4 @@ type hmap struct {
 }
 
 ```
-结构中 buckets是一个数组， 每一个后面会有一个bmap的列表
+结构中 buckets是一个数组， 每一个后面会有一个bmap的链表，其中每一个bmap中最对
