@@ -22,4 +22,27 @@ type hmap struct {
 	1. buckets是一个数组， 每一个后面会有一个bmap的链表，其中每一个bmap中最对只能保存
 	2. oldbuckets 只是在扩容的时候使用
 	3. extra表示的是在key和value中不包含指针的情况下，并行元素小于128k的时候进行内联，这个时候为了避免gc扫描整个hmap就是使用extra
+```
+type mapextra struct {
+	// If both key and value do not contain pointers and are inline, then we mark bucket type as containing no pointers.
+	// 如果这个key和value是不包含指针或者内联的,我们标记这个桶是不包含指针的
+	// This avoids scanning such maps.
+	// 避免扫描每一个桶
+	// However, bmap.overflow is a pointer. In order to keep overflow buckets alive,
+	// we store pointers to all overflow buckets in hmap.extra.overflow and hmap.extra.oldoverflow.
+	// overflow and oldoverflow are only used if key and value do not contain pointers.
+	// overflow contains overflow buckets for hmap.buckets.
+	// oldoverflow contains overflow buckets for hmap.oldbuckets.
+	// The indirection allows to store a pointer to the slice in hiter.
+	overflow    *[]*bmap // 指向的是后面的溢出桶
+	oldoverflow *[]*bmap // 扩容的时候使用
+
+	// nextOverflow holds a pointer to a free overflow bucket.
+	// 指向空闲的 overflow bucket的指针
+	nextOverflow *bmap
+}
+
+```
+
+
        
