@@ -1006,7 +1006,7 @@ func hashGrow(t *maptype, h *hmap) {
 	// by growWork() and evacuate().
 }
 
-// overLoadFactor reports whether count items placed in 1<<B buckets is over loadFactor.
+// overLoadFactor reports whether count items placed in 1<<B buckets is over loadFactor(有效负载).
 func overLoadFactor(count int, B uint8) bool {
 	return count > bucketCnt && uintptr(count) > loadFactorNum*(bucketShift(B)/loadFactorDen)
 }
