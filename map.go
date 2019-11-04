@@ -319,6 +319,7 @@ func makemap(t *maptype, hint int, h *hmap) *hmap {
 
 	// find size parameter which will hold the requested # of elements
 	B := uint8(0)
+	// 检查B是否超过了限制
 	for overLoadFactor(hint, B) {
 		B++
 	}
