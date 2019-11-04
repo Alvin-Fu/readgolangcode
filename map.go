@@ -319,7 +319,7 @@ func makemap(t *maptype, hint int, h *hmap) *hmap {
 
 	// find size parameter which will hold the requested # of elements
 	B := uint8(0)
-	// 检查B是否超过了限制
+	// 确定初始化的时候buckets的大小
 	for overLoadFactor(hint, B) {
 		B++
 	}
@@ -330,6 +330,7 @@ func makemap(t *maptype, hint int, h *hmap) *hmap {
 	// If hint is large zeroing this memory could take a while.
 	if h.B != 0 {
 		var nextOverflow *bmap
+		// 给buckets分配内存
 		h.buckets, nextOverflow = makeBucketArray(t, h.B, nil)
 		if nextOverflow != nil {
 			h.extra = new(mapextra)
@@ -341,6 +342,7 @@ func makemap(t *maptype, hint int, h *hmap) *hmap {
 }
 
 // makeBucketArray initializes a backing array for map buckets.
+// 初始化一个backets
 // 1<<b is the minimum number of buckets to allocate.
 // dirtyalloc should either be nil or a bucket array previously allocated by makeBucketArray with the same t and b parameters.
 // If dirtyalloc is nil a new backing array will be alloced and otherwise dirtyalloc will be cleared and reused as backing array.
