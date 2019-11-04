@@ -41,8 +41,20 @@ type mapextra struct {
 	// 指向空闲的 overflow bucket的指针
 	nextOverflow *bmap
 }
+type bmap struct {
+	// tophash generally contains the top byte of the hash value for each key in this bucket.
+	// If tophash[0] < minTopHash, tophash[0] is a bucket evacuation state instead.
+	// 这个就限定了一个桶可容纳的键值对的数量
+	tophash [bucketCnt]uint8
+	// 实际中每一个bmap中都会有一个overflow指向下一个bmap
+	// Followed by bucketCnt keys and then bucketCnt values.
+	// NOTE: packing all the keys together and then all the values together makes the code a bit more complicated than alternating key/value/key/value/...
+	// but it allows us to eliminate padding which would be needed for, e.g., map[int64]int8.
+	// Followed by an overflow pointer.
+}
 
 ```
+
 
 
        
