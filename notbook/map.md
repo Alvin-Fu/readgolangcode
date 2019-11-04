@@ -58,7 +58,7 @@ type bmap struct {
 	2. oldbuckets 只是在扩容的时候使用
 	3. extra表示的是在key和value中不包含指针的情况下，并行元素小于128k的时候进行内联，这个时候为了避免gc扫描整个hmap就是使用extra
 	4. mapextra这个内部的overflow和oldoverflow还是存放的bmap
-注意golang中的map在扩容的过程中，还是一个链表，
+注意golang中的map在扩容的过程中，还是一个链表，是以buckets的形式进行扩容的
 
 ## 2、map中的操作
 
