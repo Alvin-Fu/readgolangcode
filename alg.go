@@ -5,8 +5,7 @@
 package runtime
 
 import (
-	"internal/cpu"
-	"runtime/internal/sys"
+	"readruntime/internal/sys"
 	"unsafe"
 )
 

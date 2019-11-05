@@ -334,9 +334,9 @@ func reflect_typedmemclrpartial(typ *_type, ptr unsafe.Pointer, off, size uintpt
 }
 
 // memclrHasPointers clears n bytes of typed memory starting at ptr.
-// The caller must ensure that the type of the object at ptr has
-// pointers, usually by checking typ.kind&kindNoPointers. However, ptr
-// does not have to point to the start of the allocation.
+// The caller must ensure that the type of the object at ptr has pointers,
+// usually by checking typ.kind&kindNoPointers.
+// However, ptr does not have to point to the start of the allocation.
 //
 //go:nosplit
 func memclrHasPointers(ptr unsafe.Pointer, n uintptr) {
