@@ -706,7 +706,7 @@ TEXT ·cgocallback_gofunc(SB),NOSPLIT,$16-32
 	CMPQ	BX, $0
 	JEQ	needm
 	MOVQ	g_m(BX), BX
-	MOVQ	BX, R8 // holds oldm until end of function
+	MOVQ	BX, R8 // holds oldm util end of function
 	JMP	havem
 needm:
 	MOVQ	$0, 0(SP)

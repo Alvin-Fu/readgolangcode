@@ -206,7 +206,7 @@ func (c *mcentral) freeSpan(s *mspan, preserve bool, wasempty bool) bool {
 		c.nonempty.insert(s)
 	}
 
-	// delay updating sweepgen until here. This is the signal that
+	// delay updating sweepgen util here. This is the signal that
 	// the span may be used in an MCache, so it must come after the
 	// linked list operations above (actually, just after the
 	// lock of c above.)

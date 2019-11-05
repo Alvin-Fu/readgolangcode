@@ -208,7 +208,7 @@ func TestArenaCollision(t *testing.T) {
 		// for the heap.
 		start, end := MapNextArenaHint()
 		disallowed = append(disallowed, [2]uintptr{start, end})
-		// Allocate until the runtime tries to use the hint we
+		// Allocate util the runtime tries to use the hint we
 		// just mapped over.
 		hint := GetNextArenaHint()
 		for GetNextArenaHint() == hint {

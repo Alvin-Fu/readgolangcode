@@ -259,7 +259,7 @@ func (p *Profile) Count() int {
 
 // Add adds the current execution stack to the profile, associated with value.
 // Add stores value in an internal map, so value must be suitable for use as
-// a map key and will not be garbage collected until the corresponding
+// a map key and will not be garbage collected util the corresponding
 // call to Remove. Add panics if the profile already contains a stack for value.
 //
 // The skip parameter has the same meaning as runtime.Caller's skip
@@ -765,7 +765,7 @@ func StartCPUProfile(w io.Writer) error {
 }
 
 // readProfile, provided by the runtime, returns the next chunk of
-// binary CPU profiling stack trace data, blocking until data is available.
+// binary CPU profiling stack trace data, blocking util data is available.
 // If profiling is turned off and all the profile data accumulated while it was
 // on has been returned, readProfile returns eof=true.
 // The caller must save the returned data and tags before calling readProfile again.

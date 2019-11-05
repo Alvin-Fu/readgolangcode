@@ -122,7 +122,7 @@ type mutex struct {
 // notetsleep is like notesleep but wakes up after
 // a given number of nanoseconds even if the event
 // has not yet happened.  if a goroutine uses notetsleep to
-// wake up early, it must wait to call noteclear until it
+// wake up early, it must wait to call noteclear util it
 // can be sure that no other goroutine is calling
 // notewakeup.
 //
@@ -520,7 +520,7 @@ type p struct {
 	tracebuf traceBufPtr
 
 	// traceSweep indicates the sweep events should be traced.
-	// This is used to defer the sweep start event until a span
+	// This is used to defer the sweep start event util a span
 	// has actually been swept.
 	traceSweep bool
 	// traceSwept and traceReclaimed track the number of bytes

@@ -32,7 +32,7 @@ import (
 // the length of the buffer must be a power of two.
 //
 // If the reader catches up to the writer, a flag passed to read controls
-// whether the read blocks until more data is available. A read returns a
+// whether the read blocks util more data is available. A read returns a
 // pointer to the buffer data itself; the caller is assumed to be done with
 // that data at the next read. The read offset rNext tracks the next offset to
 // be returned by read. By definition, r ≤ rNext ≤ w (before wraparound),
@@ -527,7 +527,7 @@ Read:
 		tags = tags[:ntag]
 	}
 
-	// Count out whole data records until either data or tags is done.
+	// Count out whole data records util either data or tags is done.
 	// They are always in sync in the buffer, but due to an end-of-slice
 	// wraparound we might need to stop early and return the rest
 	// in the next call.

@@ -883,7 +883,7 @@ func parseThread(b []byte) (*Profile, error) {
 	}
 
 	if m := threadzStartRE.FindStringSubmatch(line); m != nil {
-		// Advance over initial comments until first stack trace.
+		// Advance over initial comments util first stack trace.
 		for {
 			line, err = r.ReadString('\n')
 			if err != nil {

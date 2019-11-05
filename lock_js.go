@@ -12,7 +12,7 @@ import (
 
 // js/wasm has no support for threads yet. There is no preemption.
 // Waiting for a mutex is implemented by allowing other goroutines
-// to run until the mutex gets unlocked.
+// to run util the mutex gets unlocked.
 
 const (
 	mutex_unlocked = 0
@@ -136,7 +136,7 @@ func checkTimeouts() {
 
 var waitingForCallback *g
 
-// sleepUntilCallback puts the current goroutine to sleep until a callback is triggered.
+// sleepUntilCallback puts the current goroutine to sleep util a callback is triggered.
 // It is currently only used by the callback routine of the syscall/js package.
 //go:linkname sleepUntilCallback syscall/js.sleepUntilCallback
 func sleepUntilCallback() {
@@ -146,7 +146,7 @@ func sleepUntilCallback() {
 }
 
 // pauseSchedulerUntilCallback gets called from the scheduler and pauses the execution
-// of Go's WebAssembly code until a callback is triggered. Then it checks for note timeouts
+// of Go's WebAssembly code util a callback is triggered. Then it checks for note timeouts
 // and resumes goroutines that are waiting for a callback.
 func pauseSchedulerUntilCallback() bool {
 	if waitingForCallback == nil && len(notesWithTimeout) == 0 {
@@ -161,7 +161,7 @@ func pauseSchedulerUntilCallback() bool {
 	return true
 }
 
-// pause pauses the execution of Go's WebAssembly code until a callback is triggered.
+// pause pauses the execution of Go's WebAssembly code util a callback is triggered.
 func pause()
 
 // scheduleCallback tells the WebAssembly environment to trigger a callback after ms milliseconds.

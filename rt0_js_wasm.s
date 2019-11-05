@@ -51,7 +51,7 @@ TEXT _rt0_wasm_js(SB),NOSPLIT,$0
 		End
 	End
 
-// Call the function for the current PC_F. Repeat until RUN != 0 indicates pause or exit.
+// Call the function for the current PC_F. Repeat util RUN != 0 indicates pause or exit.
 // The WebAssembly stack may unwind, e.g. when switching goroutines.
 // The Go stack on the linear memory is then used to jump to the correct functions
 // with this loop, without having to restore the full WebAssembly stack.

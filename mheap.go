@@ -262,7 +262,7 @@ type mspan struct {
 	manualFreeList gclinkptr // list of free objects in _MSpanManual spans
 
 	// freeindex is the slot index between 0 and nelems at which to begin scanning for the next free object in this span.
-	// Each allocation scans allocBits starting at freeindex until it encounters a 0 indicating a free object.
+	// Each allocation scans allocBits starting at freeindex util it encounters a 0 indicating a free object.
 	// freeindex is then adjusted so that subsequent scans begin just past the newly discovered free object.
 	//
 	// If freeindex == nelem, this span has no free objects.
@@ -572,7 +572,7 @@ func (h *mheap) init() {
 	}
 }
 
-// Sweeps spans in list until reclaims at least npages into heap.
+// Sweeps spans in list util reclaims at least npages into heap.
 // Returns the actual number of pages reclaimed.
 func (h *mheap) reclaimList(list *mSpanList, npages uintptr) uintptr {
 	n := uintptr(0)
@@ -1625,7 +1625,7 @@ func newAllocBits(nelems uintptr) *gcBits {
 // where the GC will mark objects and after each span is swept these bits
 // will be used to allocate objects.
 // gcBitsArenas.current becomes gcBitsArenas.previous where the span's
-// gcAllocBits live until all the spans have been swept during this GC cycle.
+// gcAllocBits live util all the spans have been swept during this GC cycle.
 // The span's sweep extinguishes all the references to gcBitsArenas.previous
 // by pointing gcAllocBits into the gcBitsArenas.current.
 // The gcBitsArenas.previous is released to the gcBitsArenas.free list.

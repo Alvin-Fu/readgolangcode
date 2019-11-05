@@ -149,7 +149,7 @@ type mstats struct {
 
 	// heap_marked is the number of bytes marked by the previous
 	// GC. After mark termination, heap_live == heap_marked, but
-	// unlike heap_live, heap_marked does not change until the
+	// unlike heap_live, heap_marked does not change util the
 	// next mark termination.
 	heap_marked uint64
 }
@@ -655,7 +655,7 @@ func purgecachedstats(c *mcache) {
 //
 // The current implementation for little endian architectures is based on
 // xadduintptr(), which is less than ideal: xadd64() should really be used.
-// Using xadduintptr() is a stop-gap solution until arm supports xadd64() that
+// Using xadduintptr() is a stop-gap solution util arm supports xadd64() that
 // doesn't use locks.  (Locks are a problem as they require a valid G, which
 // restricts their useability.)
 //

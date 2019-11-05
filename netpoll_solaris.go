@@ -63,7 +63,7 @@ import "unsafe"
 // file descriptor might have been closed and reopened already. The
 // lock allows runtime·netpollupdate to be called synchronously from
 // the loop thread while preventing other threads operating to the
-// same PollDesc, so once we unblock in the main loop, until we loop
+// same PollDesc, so once we unblock in the main loop, util we loop
 // again we know for sure we are always talking about the same file
 // descriptor and can safely access the data we want (the event set).
 

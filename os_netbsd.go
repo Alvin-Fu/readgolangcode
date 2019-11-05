@@ -140,7 +140,7 @@ func semasleep(ns int64) int32 {
 			continue
 		}
 
-		// Sleep until unparked by semawakeup or timeout.
+		// Sleep util unparked by semawakeup or timeout.
 		var tsp *timespec
 		var ts timespec
 		if ns >= 0 {

@@ -82,7 +82,7 @@ func isgoexception(info *exceptionrecord, r *context) bool {
 // or should be made available to other handlers in the chain (EXCEPTION_CONTINUE_SEARCH).
 //
 // This is the first entry into Go code for exception handling. This
-// is nosplit to avoid growing the stack until we've checked for
+// is nosplit to avoid growing the stack util we've checked for
 // _EXCEPTION_BREAKPOINT, which is raised if we overflow the g0 stack,
 //
 //go:nosplit

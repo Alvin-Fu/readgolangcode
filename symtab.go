@@ -87,7 +87,7 @@ type stackExpander struct {
 
 // CallersFrames takes a slice of PC values returned by Callers and
 // prepares to return function/file/line information.
-// Do not change the slice until you are done with the Frames.
+// Do not change the slice util you are done with the Frames.
 func CallersFrames(callers []uintptr) *Frames {
 	ci := &Frames{}
 	ci.callers = ci.stackExpander.init(callers)
@@ -679,7 +679,7 @@ func findfunc(pc uintptr) funcInfo {
 	}
 	if pc < datap.ftab[idx].entry {
 		// With multiple text sections, the idx might reference a function address that
-		// is higher than the pc being searched, so search backward until the matching address is found.
+		// is higher than the pc being searched, so search backward util the matching address is found.
 
 		for datap.ftab[idx].entry > pc && idx > 0 {
 			idx--
@@ -785,7 +785,7 @@ func pcvalue(f funcInfo, off int32, targetpc uintptr, cache *pcvalueCache, stric
 		if !ok {
 			break
 		}
-		print("\tvalue=", val, " until pc=", hex(pc), "\n")
+		print("\tvalue=", val, " util pc=", hex(pc), "\n")
 	}
 
 	throw("invalid runtime symbol table")

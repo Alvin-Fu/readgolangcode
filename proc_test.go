@@ -162,7 +162,7 @@ func testGoroutineParallelism2(t *testing.T, load, netpoll bool) {
 	defer debug.SetGCPercent(debug.SetGCPercent(-1))
 	for try := 0; try < N; try++ {
 		if load {
-			// Create P goroutines and wait until they all run.
+			// Create P goroutines and wait util they all run.
 			// When we run the actual test below, worker threads
 			// running the goroutines will start parking.
 			done := make(chan bool)

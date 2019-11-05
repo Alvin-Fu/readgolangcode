@@ -110,7 +110,7 @@ func signal_recv() string {
 	}
 }
 
-// signalWaitUntilIdle waits until the signal delivery mechanism is idle.
+// signalWaitUntilIdle waits util the signal delivery mechanism is idle.
 // This is used to ensure that we do not drop a signal notification due
 // to a race between disabling a signal and receiving a signal.
 // This assumes that signal delivery has already been disabled for

@@ -83,8 +83,8 @@ type memRecord struct {
 	//                           ┠┅┅┅┅┅┅┅┅┅┅┅P
 	//                   C+2     →    C+1    →  C
 	//
-	// Since we can't publish a consistent snapshot until all of
-	// the sweep frees are accounted for, we wait until the next
+	// Since we can't publish a consistent snapshot util all of
+	// the sweep frees are accounted for, we wait util the next
 	// mark termination ("MT" above) to publish the previous mark
 	// termination's snapshot ("P" above). To do this, allocation
 	// and free events are accounted to *future* heap profile
@@ -533,7 +533,7 @@ func (r *MemProfileRecord) Stack() []uintptr {
 //
 // The returned profile may be up to two garbage collection cycles old.
 // This is to avoid skewing the profile toward allocations; because
-// allocations happen in real time but frees are delayed until the garbage
+// allocations happen in real time but frees are delayed util the garbage
 // collector performs sweeping, the profile only accounts for allocations
 // that have had a chance to be freed by the garbage collector.
 //

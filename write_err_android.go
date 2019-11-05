@@ -56,7 +56,7 @@ func writeErr(b []byte) {
 	//
 	// The entire log needs to be delivered in a single syscall (the NDK
 	// does this with writev). Each log is its own line, so we need to
-	// buffer writes until we see a newline.
+	// buffer writes util we see a newline.
 	var hlen int
 	switch logger {
 	case logd:

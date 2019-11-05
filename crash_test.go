@@ -563,7 +563,7 @@ func TestPanicInlined(t *testing.T) {
 }
 
 // Test for issues #3934 and #20018.
-// We want to delay exiting until a panic print is complete.
+// We want to delay exiting util a panic print is complete.
 func TestPanicRace(t *testing.T) {
 	testenv.MustHaveGoRun(t)
 

@@ -254,7 +254,7 @@ func markroot(gcw *gcWork, i uint32) {
 				userG.waitreason = waitReasonGarbageCollectionScan
 			}
 
-			// TODO: scang blocks until gp's stack has
+			// TODO: scang blocks util gp's stack has
 			// been scanned, which may take a while for
 			// running goroutines. Consider doing this in
 			// two phases where the first is non-blocking:
@@ -431,7 +431,7 @@ retry:
 	// Steal as much credit as we can from the background GC's
 	// scan credit. This is racy and may drop the background
 	// credit below 0 if two mutators steal at the same time. This
-	// will just cause steals to fail until credit is accumulated
+	// will just cause steals to fail util credit is accumulated
 	// again, so in the long run it doesn't really matter, but we
 	// do have to handle the negative credit case.
 	bgScanCredit := atomic.Loadint64(&gcController.bgScanCredit)
@@ -467,7 +467,7 @@ retry:
 	systemstack(func() {
 		gcAssistAlloc1(gp, scanWork)
 		// The user stack may have moved, so this can't touch
-		// anything on it until it returns from systemstack.
+		// anything on it util it returns from systemstack.
 	})
 
 	completed := gp.param != nil
@@ -825,7 +825,7 @@ const (
 )
 
 // gcDrain scans roots and objects in work buffers, blackening grey
-// objects until all roots and work buffers have been drained.
+// objects util all roots and work buffers have been drained.
 //
 // If flags&gcDrainUntilPreempt != 0, gcDrain returns when g.preempt
 // is set. This implies gcDrainNoBlock.
@@ -838,7 +838,7 @@ const (
 // gcDrainNoBlock.
 //
 // If flags&gcDrainNoBlock != 0, gcDrain returns as soon as it is
-// unable to get more work. Otherwise, it will block until all
+// unable to get more work. Otherwise, it will block util all
 // blocking calls are blocked in gcDrain.
 //
 // If flags&gcDrainFlushBgCredit != 0, gcDrain flushes scan work
@@ -948,7 +948,7 @@ done:
 	}
 }
 
-// gcDrainN blackens grey objects until it has performed roughly
+// gcDrainN blackens grey objects util it has performed roughly
 // scanWork units of scan work or the G is preempted. This is
 // best-effort, so it may perform less work if it fails to get a work
 // buffer. Otherwise, it will perform at least n units of work, but

@@ -39,7 +39,7 @@ var cgoHasExtraM bool
 // an unexported name). The calls serve two purposes:
 // 1) they are opaque to escape analysis, so the argument is considered to
 // escape to the heap.
-// 2) they keep the argument alive until the call site; the call is emitted after
+// 2) they keep the argument alive util the call site; the call is emitted after
 // the end of the (presumed) use of the argument by C.
 // cgoUse should not actually be called (see cgoAlwaysFalse).
 func cgoUse(interface{}) { throw("cgoUse should not be called") }

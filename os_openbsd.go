@@ -149,7 +149,7 @@ func semasleep(ns int64) int32 {
 			continue
 		}
 
-		// Sleep until woken by semawakeup or timeout; or abort if waitsemacount != 0.
+		// Sleep util woken by semawakeup or timeout; or abort if waitsemacount != 0.
 		//
 		// From OpenBSD's __thrsleep(2) manual:
 		// "The abort argument, if not NULL, points to an int that will

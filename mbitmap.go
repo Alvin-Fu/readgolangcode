@@ -1020,7 +1020,7 @@ func heapBitsSetType(x, size, dataSize uintptr, typ *_type) {
 
 	hbitp = h.bitp
 
-	// Handle GC program. Delayed until this part of the code
+	// Handle GC program. Delayed util this part of the code
 	// so that we can use the same double-checking mechanism
 	// as the 1-bit case. Nothing above could have encountered
 	// GC programs: the cases were all too small.
@@ -1155,7 +1155,7 @@ func heapBitsSetType(x, size, dataSize uintptr, typ *_type) {
 	}
 	if nw < 2 {
 		// Must write at least 2 words, because the "no scan"
-		// encoding doesn't take effect until the third word.
+		// encoding doesn't take effect util the third word.
 		nw = 2
 	}
 
@@ -1359,7 +1359,7 @@ Phase4:
 			src = addb(src, 1)
 		}
 		// We're now byte aligned. Copy out to per-arena
-		// bitmaps until the last byte (which may again be
+		// bitmaps util the last byte (which may again be
 		// partial).
 		for cnw >= 4 {
 			// This loop processes four words at a time,
@@ -1758,7 +1758,7 @@ Run:
 				b := pattern
 				nb := npattern
 				if nb+nb <= maxBits {
-					// Double pattern until the whole uintptr is filled.
+					// Double pattern util the whole uintptr is filled.
 					for nb <= sys.PtrSize*8 {
 						b |= b << nb
 						nb += nb

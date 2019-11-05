@@ -133,7 +133,7 @@ func itabAdd(m *itab) {
 		// Copy over entries.
 		// Note: while copying, other threads may look for an itab and
 		// fail to find it. That's ok, they will then try to get the itab lock
-		// and as a consequence wait until this copying is complete.
+		// and as a consequence wait util this copying is complete.
 		iterate_itabs(t2.add)
 		if t2.count != t.count {
 			throw("mismatched count during itab table copy")

@@ -29,7 +29,7 @@ check:
 	SGTU	$8, R3, R4
 	BNE	R4, out
 
-	// do one byte at a time until 8-aligned
+	// do one byte at a time util 8-aligned
 	AND	$7, R1, R5
 	BEQ	R5, words
 	MOVB	(R2), R4
@@ -73,7 +73,7 @@ backward:
 	SGTU	$8, R3, R4
 	BNE	R4, out1
 
-	// do one byte at a time until 8-aligned
+	// do one byte at a time util 8-aligned
 	AND	$7, R6, R5
 	BEQ	R5, words1
 	ADDV	$-1, R2

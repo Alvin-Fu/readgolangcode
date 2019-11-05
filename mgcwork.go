@@ -126,7 +126,7 @@ func (w *gcWork) put(obj uintptr) {
 	wbuf.nobj++
 
 	// If we put a buffer on full, let the GC controller know so
-	// it can encourage more workers to run. We delay this until
+	// it can encourage more workers to run. We delay this util
 	// the end of put so that w is in a consistent state, since
 	// enlistWorker may itself manipulate w.
 	if flushed && gcphase == _GCmark {
@@ -328,7 +328,7 @@ func (w *gcWork) empty() bool {
 }
 
 // Internally, the GC work pool is kept in arrays in work buffers.
-// The gcWork interface caches a work buffer until full (or empty) to
+// The gcWork interface caches a work buffer util full (or empty) to
 // avoid contending on the global work buffer lists.
 
 type workbufhdr struct {
@@ -441,7 +441,7 @@ func trygetfull() *workbuf {
 }
 
 // Get a full work buffer off the work.full list.
-// If nothing is available wait until all the other gc helpers have
+// If nothing is available wait util all the other gc helpers have
 // finished and then return nil.
 // getfull acts as a barrier for work.nproc helpers. As long as one
 // gchelper is actively marking objects it

@@ -41,7 +41,7 @@ func sysUnused(v unsafe.Pointer, n uintptr) {
 	// just not pages from multiple allocs. This is a rare case, arising only when we're
 	// trying to give memory back to the operating system, which happens on a time
 	// scale of minutes. It doesn't have to be terribly fast. Instead of extra bookkeeping
-	// on all our VirtualAlloc calls, try freeing successively smaller pieces until
+	// on all our VirtualAlloc calls, try freeing successively smaller pieces util
 	// we manage to free something, and then repeat. This ends up being O(n log n)
 	// in the worst case, but that's fast enough.
 	for n > 0 {

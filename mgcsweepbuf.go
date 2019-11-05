@@ -69,7 +69,7 @@ retry:
 		// Add a new block to the spine, potentially growing
 		// the spine.
 		lock(&b.spineLock)
-		// spineLen cannot change until we release the lock,
+		// spineLen cannot change util we release the lock,
 		// but may have changed while we were waiting.
 		spineLen = atomic.Loaduintptr(&b.spineLen)
 		if top < spineLen {

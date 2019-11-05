@@ -463,7 +463,7 @@ func raisebadsignal(sig uint32, c *sigctxt) {
 	// Reset the signal handler and raise the signal.
 	// We are currently running inside a signal handler, so the
 	// signal is blocked. We need to unblock it before raising the
-	// signal, or the signal we raise will be ignored until we return
+	// signal, or the signal we raise will be ignored util we return
 	// from the signal handler. We know that the signal was unblocked
 	// before entering the handler, or else we would not have received
 	// it. That means that we don't have to worry about blocking it
@@ -778,7 +778,7 @@ func unminitSignals() {
 // these are the synchronous signals that turn into a Go panic.
 // In a Go program--not a c-archive/c-shared--we never want to block
 // the signals marked _SigKill or _SigThrow, as otherwise it's possible
-// for all running threads to block them and delay their delivery until
+// for all running threads to block them and delay their delivery util
 // we start a new thread. When linked into a C program we let the C code
 // decide on the disposition of those signals.
 func blockableSig(sig uint32) bool {

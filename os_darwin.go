@@ -77,7 +77,7 @@ func semawakeup(mp *m) {
 
 // BSD interface for threading.
 func osinit() {
-	// pthread_create delayed until end of goenvs so that we
+	// pthread_create delayed util end of goenvs so that we
 	// can look at the environment first.
 
 	ncpu = getncpu()

@@ -25,7 +25,7 @@ check:
 	// Copying forward proceeds by copying R7/8 words then copying R6 bytes.
 	// R3 and R4 are advanced as we copy.
 
-        // (There may be implementations of armv8 where copying by bytes until
+        // (There may be implementations of armv8 where copying by bytes util
         // at least one of source or dest is word aligned is a worthwhile
         // optimization, but the on the one tested so far (xgene) it did not
         // make a significance difference.)

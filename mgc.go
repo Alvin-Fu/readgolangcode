@@ -34,7 +34,7 @@
 //    a. Prepare for the mark phase by setting gcphase to _GCmark
 //    (from _GCoff), enabling the write barrier, enabling mutator
 //    assists, and enqueueing root mark jobs. No objects may be
-//    scanned until all Ps have enabled the write barrier, which is
+//    scanned util all Ps have enabled the write barrier, which is
 //    accomplished using STW.
 //
 //    b. Start the world. From this point, GC work is done by mark
@@ -101,9 +101,9 @@
 // To avoid requesting more OS memory while there are unswept spans, when a
 // goroutine needs another span, it first attempts to reclaim that much memory
 // by sweeping. When a goroutine needs to allocate a new small-object span, it
-// sweeps small-object spans for the same object size until it frees at least
+// sweeps small-object spans for the same object size util it frees at least
 // one object. When a goroutine needs to allocate large-object span from heap,
-// it sweeps spans until it frees at least that many pages into heap. There is
+// it sweeps spans util it frees at least that many pages into heap. There is
 // one case where this may not suffice: if a goroutine sweeps and frees two
 // nonadjacent one-page spans to the heap, it will allocate a new two-page
 // span, but there can still be other one-page unswept spans which could be
@@ -271,7 +271,7 @@ var gcBlackenEnabled uint32
 // marked they can be collected during this GC cycle. On the other
 // hand allocating them black will reduce _GCmarktermination latency
 // since more work is done in the mark phase. This tension is resolved
-// by allocating white until the mark phase is approaching its end and
+// by allocating white util the mark phase is approaching its end and
 // then allocating black for the remainder of the mark phase.
 var gcBlackenPromptly bool
 
@@ -306,14 +306,14 @@ const (
 	// gcMarkWorkerFractionalMode indicates that a P is currently
 	// running the "fractional" mark worker. The fractional worker
 	// is necessary when GOMAXPROCS*gcBackgroundUtilization is not
-	// an integer. The fractional worker should run until it is
+	// an integer. The fractional worker should run util it is
 	// preempted and will be scheduled to pick up the fractional
 	// part of GOMAXPROCS*gcBackgroundUtilization.
 	gcMarkWorkerFractionalMode
 
 	// gcMarkWorkerIdleMode indicates that a P is running the mark
 	// worker because it has nothing else to do. The idle worker
-	// should run until it is preempted and account its time
+	// should run util it is preempted and account its time
 	// against gcController.idleMarkTime.
 	gcMarkWorkerIdleMode
 )
@@ -722,7 +722,7 @@ func (c *gcControllerState) findRunnableGCWorker(_p_ *p) *g {
 	}
 
 	if decIfPositive(&c.dedicatedMarkWorkersNeeded) {
-		// This P is now dedicated to marking until the end of
+		// This P is now dedicated to marking util the end of
 		// the concurrent mark phase.
 		_p_.gcMarkWorkerMode = gcMarkWorkerDedicatedMode
 	} else if c.fractionalUtilizationGoal == 0 {
@@ -989,7 +989,7 @@ var work struct {
 	// Likewise, any transition must invalidate the transition
 	// condition before releasing the lock. This ensures that each
 	// transition is performed by exactly one thread and threads
-	// that need the transition to happen block until it has
+	// that need the transition to happen block util it has
 	// happened.
 	//
 	// startSema protects the transition from "off" to mark or
@@ -1050,18 +1050,18 @@ var work struct {
 	heap0, heap1, heap2, heapGoal uint64
 }
 
-// GC runs a garbage collection and blocks the caller until the
+// GC runs a garbage collection and blocks the caller util the
 // garbage collection is complete. It may also block the entire
 // program.
 func GC() {
 	// We consider a cycle to be: sweep termination, mark, mark
 	// termination, and sweep. This function shouldn't return
-	// until a full cycle has been completed, from beginning to
+	// util a full cycle has been completed, from beginning to
 	// end. Hence, we always want to finish up the current cycle
 	// and start a new one. That means:
 	//
 	// 1. In sweep termination, mark, or mark termination of cycle
-	// N, wait until mark termination N completes and transitions
+	// N, wait util mark termination N completes and transitions
 	// to sweep N.
 	//
 	// 2. In sweep N, help with sweep N.
@@ -1072,13 +1072,13 @@ func GC() {
 	//
 	// 4. Wait for mark termination N+1 to complete.
 	//
-	// 5. Help with sweep N+1 until it's done.
+	// 5. Help with sweep N+1 util it's done.
 	//
 	// This all has to be written to deal with the fact that the
 	// GC may move ahead on its own. For example, when we block
-	// until mark termination N, we may wake up in cycle N+2.
+	// util mark termination N, we may wake up in cycle N+2.
 
-	// Wait until the current sweep termination, mark, and mark
+	// Wait util the current sweep termination, mark, and mark
 	// termination complete.
 	n := atomic.Load(&work.cycles)
 	gcWaitOnMark(n)
@@ -1126,7 +1126,7 @@ func GC() {
 	releasem(mp)
 }
 
-// gcWaitOnMark blocks until GC finishes the Nth mark phase. If GC has
+// gcWaitOnMark blocks util GC finishes the Nth mark phase. If GC has
 // already completed this mark phase, it returns immediately.
 func gcWaitOnMark(n uint32) {
 	for {
@@ -1143,7 +1143,7 @@ func gcWaitOnMark(n uint32) {
 			return
 		}
 
-		// Wait until sweep termination, mark, and mark
+		// Wait util sweep termination, mark, and mark
 		// termination of cycle N complete.
 		gp := getg()
 		gp.schedlink = work.sweepWaiters.head
@@ -1318,7 +1318,7 @@ func gcStart(mode gcMode, trigger gcTrigger) {
 		finishsweep_m()
 	})
 	// clearpools before we start the GC. If we wait they memory will not be
-	// reclaimed until the next GC cycle.
+	// reclaimed util the next GC cycle.
 	clearpools()
 
 	work.cycles++
@@ -1337,7 +1337,7 @@ func gcStart(mode gcMode, trigger gcTrigger) {
 		// Write barriers must be enabled before assists are
 		// enabled because they must be enabled before
 		// any non-leaf heap objects are marked. Since
-		// allocations are blocked until assists can
+		// allocations are blocked util assists can
 		// happen, we want enable assists as early as
 		// possible.
 		setGCPhase(_GCmark)
@@ -1430,7 +1430,7 @@ top:
 		// Disallow caching workbufs and indicate that we're in mark 2.
 		gcBlackenPromptly = true
 
-		// Prevent completion of mark 2 until we've flushed
+		// Prevent completion of mark 2 util we've flushed
 		// cached workbufs.
 		atomic.Xadd(&work.nwait, -1)
 
@@ -1441,7 +1441,7 @@ top:
 		systemstack(func() {
 			// Flush all currently cached workbufs and
 			// ensure all Ps see gcBlackenPromptly. This
-			// also blocks until any remaining mark 1
+			// also blocks util any remaining mark 1
 			// workers have exited their loop so we can
 			// start new mark 2 workers.
 			forEachP(func(_p_ *p) {
@@ -1482,7 +1482,7 @@ top:
 		}
 		systemstack(stopTheWorldWithSema)
 		// The gcphase is _GCmark, it will transition to _GCmarktermination
-		// below. The important thing is that the wb remains active until
+		// below. The important thing is that the wb remains active util
 		// all marking is complete. This includes writes made by the GC.
 
 		// Record that one root marking pass has completed.
@@ -1708,7 +1708,7 @@ func gcMarkTermination(nextTriggerRatio float64) {
 }
 
 // gcBgMarkStartWorkers prepares background mark worker goroutines.
-// These goroutines will not run until the mark phase, but they must
+// These goroutines will not run util the mark phase, but they must
 // be started while the work is not stopped and from a regular G
 // stack. The caller must hold worldsema.
 func gcBgMarkStartWorkers() {
@@ -1765,7 +1765,7 @@ func gcBgMarkWorker(_p_ *p) {
 	notewakeup(&work.bgMarkReady)
 
 	for {
-		// Go to sleep until woken by gcController.findRunnable.
+		// Go to sleep util woken by gcController.findRunnable.
 		// We can't releasem yet since even the call to gopark
 		// may be preempted.
 		gopark(func(g *g, parkp unsafe.Pointer) bool {
@@ -1797,7 +1797,7 @@ func gcBgMarkWorker(_p_ *p) {
 			return true
 		}, unsafe.Pointer(park), waitReasonGCWorkerIdle, traceEvGoBlock, 0)
 
-		// Loop until the P dies and disassociates this
+		// Loop util the P dies and disassociates this
 		// worker (the P may later be reused, in which case
 		// it will get a new worker) or we failed to associate.
 		if _p_.gcBgMarkWorker.ptr() != gp {
@@ -1911,7 +1911,7 @@ func gcBgMarkWorker(_p_ *p) {
 			// to the P.
 			//
 			// We may be running on a different P at this
-			// point, so we can't reattach until this G is
+			// point, so we can't reattach util this G is
 			// parked.
 			park.m.set(acquirem())
 			park.attach.set(_p_)

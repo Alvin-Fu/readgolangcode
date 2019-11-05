@@ -239,9 +239,9 @@ TEXT runtime·gogo(SB),NOSPLIT,$8-4
 	// are out of sync and must not be used as the basis of a traceback.
 	// Sigprof skips the traceback when SP is not within g's bounds,
 	// and when the PC is inside this function, runtime.gogo.
-	// Since we are about to update SP, until we complete runtime.gogo
+	// Since we are about to update SP, util we complete runtime.gogo
 	// we must not leave this function. In particular, no calls
-	// after this point: it must be straight-line code until the
+	// after this point: it must be straight-line code util the
 	// final B instruction.
 	// See large comment in sigprof for more details.
 	MOVW	gobuf_sp(R1), R13	// restore SP==R13

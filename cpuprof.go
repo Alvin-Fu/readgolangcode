@@ -62,7 +62,7 @@ func SetCPUProfileRate(hz int) {
 	lock(&cpuprof.lock)
 	if hz > 0 {
 		if cpuprof.on || cpuprof.log != nil {
-			print("runtime: cannot set cpu profile rate until previous profile has finished.\n")
+			print("runtime: cannot set cpu profile rate util previous profile has finished.\n")
 			unlock(&cpuprof.lock)
 			return
 		}
@@ -192,7 +192,7 @@ func runtime_pprof_runtime_cyclesPerSecond() int64 {
 }
 
 // readProfile, provided to runtime/pprof, returns the next chunk of
-// binary CPU profiling stack trace data, blocking until data is available.
+// binary CPU profiling stack trace data, blocking util data is available.
 // If profiling is turned off and all the profile data accumulated while it was
 // on has been returned, readProfile returns eof=true.
 // The caller must save the returned data and tags before calling readProfile again.

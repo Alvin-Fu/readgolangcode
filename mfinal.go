@@ -287,7 +287,7 @@ func runfinq() {
 //
 // A finalizer may run as soon as an object becomes unreachable.
 // In order to use finalizers correctly, the program must ensure that
-// the object is reachable until it is no longer required.
+// the object is reachable util it is no longer required.
 // Objects stored in global variables, or that can be found by tracing
 // pointers from a global variable, are reachable. For other objects,
 // pass the object to a call of the KeepAlive function to mark the
@@ -436,7 +436,7 @@ okarg:
 // 	runtime.SetFinalizer(p, func(p *File) { syscall.Close(p.d) })
 // 	var buf [10]byte
 // 	n, err := syscall.Read(p.d, buf[:])
-// 	// Ensure p is not finalized until Read returns.
+// 	// Ensure p is not finalized util Read returns.
 // 	runtime.KeepAlive(p)
 // 	// No more uses of p after this point.
 //

@@ -16,7 +16,7 @@ TEXT runtime·memclrNoHeapPointers(SB),NOSPLIT,$0-16
 	SGTU	$8, R2, R3
 	BNE	R3, out
 
-	// do one byte at a time until 8-aligned
+	// do one byte at a time util 8-aligned
 	AND	$7, R1, R3
 	BEQ	R3, words
 	MOVB	R0, (R1)

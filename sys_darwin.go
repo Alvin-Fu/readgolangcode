@@ -27,7 +27,7 @@ func libcCall(fn, arg unsafe.Pointer) int32 {
 	} else {
 		// Make sure we don't reset libcallsp. This makes
 		// libcCall reentrant; We remember the g/pc/sp for the
-		// first call on an M, until that libcCall instance
+		// first call on an M, util that libcCall instance
 		// returns.  Reentrance only matters for signals, as
 		// libc never calls back into Go.  The tricky case is
 		// where we call libcX from an M and record g/pc/sp.

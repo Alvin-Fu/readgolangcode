@@ -219,7 +219,7 @@ func deltimer(t *timer) bool {
 }
 
 // Timerproc runs the time-driven events.
-// It sleeps until the next event in the tb heap.
+// It sleeps util the next event in the tb heap.
 // If addtimer inserts a new earlier event, it wakes timerproc early.
 func timerproc(tb *timersBucket) {
 	tb.gp = getg()
@@ -280,7 +280,7 @@ func timerproc(tb *timersBucket) {
 			goparkunlock(&tb.lock, waitReasonTimerGoroutineIdle, traceEvGoBlock, 1)
 			continue
 		}
-		// At least one timer pending. Sleep until then.
+		// At least one timer pending. Sleep util then.
 		tb.sleeping = true
 		tb.sleepUntil = now + delta
 		noteclear(&tb.waitnote)

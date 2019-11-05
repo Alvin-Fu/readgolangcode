@@ -184,7 +184,7 @@ func TestEmptySlice(t *testing.T) {
 	case <-time.After(4 * time.Second):
 		t.Errorf("finalizer of next object in memory didn't run")
 	}
-	xsglobal = xs // keep empty slice alive until here
+	xsglobal = xs // keep empty slice alive util here
 }
 
 var xsglobal []byte
@@ -216,7 +216,7 @@ func TestEmptyString(t *testing.T) {
 	case <-time.After(4 * time.Second):
 		t.Errorf("finalizer of next string in memory didn't run")
 	}
-	ssglobal = ss // keep 0-length string live until here
+	ssglobal = ss // keep 0-length string live util here
 }
 
 var ssglobal string

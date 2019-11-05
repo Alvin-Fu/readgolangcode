@@ -97,7 +97,7 @@ func deferproc(siz int32, fn *funcval) { // arguments of fn follow fn
 
 	// the arguments of fn are in a perilous state. The stack map
 	// for deferproc does not describe them. So we can't let garbage
-	// collection or stack copying trigger until we've copied them out
+	// collection or stack copying trigger util we've copied them out
 	// to somewhere safe. The memmove below does that.
 	// Until the copy completes, we can only call nosplit routines.
 	sp := getcallersp()
@@ -325,7 +325,7 @@ func freedeferfn() {
 // which will jump to the deferred function such that it appears
 // to have been called by the caller of deferreturn at the point
 // just before deferreturn was called. The effect is that deferreturn
-// is called again and again until there are no more deferred functions.
+// is called again and again util there are no more deferred functions.
 // Cannot split the stack because we reuse the caller's frame to
 // call the deferred function.
 
@@ -347,7 +347,7 @@ func deferreturn(arg0 uintptr) {
 	//
 	// Everything called after this point must be recursively
 	// nosplit because the garbage collector won't know the form
-	// of the arguments until the jmpdefer can flip the PC over to
+	// of the arguments util the jmpdefer can flip the PC over to
 	// fn.
 	switch d.siz {
 	case 0:

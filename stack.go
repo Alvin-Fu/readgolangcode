@@ -225,7 +225,7 @@ func stackpoolfree(x gclinkptr, order uint8) {
 		// Span is completely free. Return it to the heap
 		// immediately if we're sweeping.
 		//
-		// If GC is active, we delay the free until the end of
+		// If GC is active, we delay the free util the end of
 		// GC to avoid the following type of situation:
 		//
 		// 1) GC starts, scans a SudoG but does not yet mark the SudoG.elem pointer
@@ -236,7 +236,7 @@ func stackpoolfree(x gclinkptr, order uint8) {
 		//    marking fails because the pointer looks like a
 		//    pointer into a free span.
 		//
-		// By not freeing, we prevent step #4 until GC is done.
+		// By not freeing, we prevent step #4 util GC is done.
 		stackpool[order].remove(s)
 		s.manualFreeList = 0
 		osStackFree(s)
@@ -482,7 +482,7 @@ func stackfree(stk stack) {
 	}
 }
 
-var maxstacksize uintptr = 1 << 20 // enough until runtime.main sets it for real
+var maxstacksize uintptr = 1 << 20 // enough util runtime.main sets it for real
 
 var ptrnames = []string{
 	0: "scalar",

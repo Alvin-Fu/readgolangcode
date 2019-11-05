@@ -96,9 +96,9 @@ func TestProfBuf(t *testing.T) {
 		// overflow record synthesized by write
 		b := NewProfBuf(2, 16, 5)
 		write(t, b, unsafe.Pointer(&myTags[0]), 1, []uint64{2, 3}, []uintptr{4, 5, 6, 7, 8, 9})           // uses 10
-		read(t, b, []uint64{10, 1, 2, 3, 4, 5, 6, 7, 8, 9}, []unsafe.Pointer{unsafe.Pointer(&myTags[0])}) // reads 10 but still in use until next read
+		read(t, b, []uint64{10, 1, 2, 3, 4, 5, 6, 7, 8, 9}, []unsafe.Pointer{unsafe.Pointer(&myTags[0])}) // reads 10 but still in use util next read
 		write(t, b, unsafe.Pointer(&myTags[0]), 1, []uint64{2, 3}, []uintptr{4, 5})                       // uses 6
-		read(t, b, []uint64{6, 1, 2, 3, 4, 5}, []unsafe.Pointer{unsafe.Pointer(&myTags[0])})              // reads 6 but still in use until next read
+		read(t, b, []uint64{6, 1, 2, 3, 4, 5}, []unsafe.Pointer{unsafe.Pointer(&myTags[0])})              // reads 6 but still in use util next read
 		// now 10 available
 		write(t, b, unsafe.Pointer(&myTags[2]), 99, []uint64{101, 102}, []uintptr{201, 202, 203, 204, 205, 206, 207, 208, 209}) // no room
 		for i := 0; i < 299; i++ {
@@ -116,7 +116,7 @@ func TestProfBuf(t *testing.T) {
 		for i := 0; i < 299; i++ {
 			write(t, b, unsafe.Pointer(&myTags[3]), 100, []uint64{101, 102}, []uintptr{201, 202, 203, 204})
 		}
-		read(t, b, []uint64{10, 1, 2, 3, 4, 5, 6, 7, 8, 9}, []unsafe.Pointer{unsafe.Pointer(&myTags[0])}) // reads 10 but still in use until next read
+		read(t, b, []uint64{10, 1, 2, 3, 4, 5, 6, 7, 8, 9}, []unsafe.Pointer{unsafe.Pointer(&myTags[0])}) // reads 10 but still in use util next read
 		write(t, b, unsafe.Pointer(&myTags[1]), 500, []uint64{502, 504}, []uintptr{})                     // still overflow
 		read(t, b, []uint64{5, 99, 0, 0, 301}, []unsafe.Pointer{nil})                                     // overflow synthesized by read
 		write(t, b, unsafe.Pointer(&myTags[1]), 500, []uint64{502, 505}, []uintptr{506})                  // written

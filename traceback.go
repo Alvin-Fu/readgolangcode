@@ -516,7 +516,7 @@ func gentraceback(pc0, sp0, lr0 uintptr, gp *g, skip int, pcbuf *uintptr, max in
 	//
 	// During the execution of d2, however, the panic stack is d2 -> d3,
 	// which is inverted. The scan will match d2 to frame 2 but having
-	// d2 on the stack until then means it will not match d3 to frame 3.
+	// d2 on the stack util then means it will not match d3 to frame 3.
 	// This is okay: if we're running d2, then all the defers after d2 have
 	// completed and their corresponding frames are dead. Not finding d3
 	// for frame 3 means we'll set frame 3's continpc == 0, which is correct

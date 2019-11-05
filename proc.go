@@ -568,7 +568,7 @@ func schedinit() {
 	}
 
 	// For cgocheck > 1, we turn on the write barrier at all times
-	// and check all pointer writes. We can't do this until after
+	// and check all pointer writes. We can't do this util after
 	// procresize because the write barrier needs a P.
 	if debug.cgocheck > 1 {
 		writeBarrier.cgo = true
@@ -827,7 +827,7 @@ func castogscanstatus(gp *g, oldval, newval uint32) bool {
 
 // If asked to move to or from a Gscanstatus this will throw. Use the castogscanstatus
 // and casfrom_Gscanstatus instead.
-// casgstatus will loop if the g->atomicstatus is in a Gscan status until the routine that
+// casgstatus will loop if the g->atomicstatus is in a Gscan status util the routine that
 // put it in the Gscan state is finished.
 //go:nosplit
 func casgstatus(gp *g, oldval, newval uint32) {
@@ -902,7 +902,7 @@ func casgcopystack(gp *g) uint32 {
 	}
 }
 
-// scang blocks until gp's stack has been scanned.
+// scang blocks util gp's stack has been scanned.
 // It might be scanned by scang or it might be scanned by the goroutine itself.
 // Either way, the stack scan has completed when scang returns.
 func scang(gp *g, gcw *gcWork) {
@@ -941,7 +941,7 @@ loop:
 			// Claim goroutine by setting scan bit.
 			// Racing with execution or readying of gp.
 			// The scan bit keeps them from running
-			// the goroutine until we're done.
+			// the goroutine util we're done.
 			if castogscanstatus(gp, s, s|_Gscan) {
 				if !gp.gcscandone {
 					scanstack(gp, gcw)
@@ -1363,12 +1363,12 @@ func mexit(osStack bool) {
 	throw("m not found in allm")
 found:
 	if !osStack {
-		// Delay reaping m until it's done with the stack.
+		// Delay reaping m util it's done with the stack.
 		//
 		// If this is using an OS stack, the OS will free it
 		// so there's no need for reaping.
 		atomic.Store(&m.freeWait, 1)
-		// Put m on the free list, though it will not be reaped until
+		// Put m on the free list, though it will not be reaped util
 		// freeWait is 0. Note that the free list must not be linked
 		// through alllink because some functions walk allm without
 		// locking, so may be using alllink.
@@ -1647,7 +1647,7 @@ func needm(x byte) {
 	// Set needextram when we've just emptied the list,
 	// so that the eventual call into cgocallbackg will
 	// allocate a new m for the extra list. We delay the
-	// allocation until then so that it can be done
+	// allocation util then so that it can be done
 	// after exitsyscall makes sure it is okay to be
 	// running at all (that is, there's no garbage collection
 	// running right now).
@@ -1658,7 +1658,7 @@ func needm(x byte) {
 	// Save and block signals before installing g.
 	// Once g is installed, any incoming signals will try to execute,
 	// but we won't have the sigaltstack settings and other data
-	// set up appropriately until the end of minit, which will
+	// set up appropriately util the end of minit, which will
 	// unblock the signals. This is the same dance as when
 	// starting a new m to run Go code via newosproc.
 	msigsave(mp)
@@ -1727,7 +1727,7 @@ func oneNewExtraM() {
 	// malg returns status as _Gidle. Change to _Gdead before
 	// adding to allg where GC can see it. We use _Gdead to hide
 	// this from tracebacks and stack scans since it isn't a
-	// "real" goroutine until needm grabs it.
+	// "real" goroutine util needm grabs it.
 	casgstatus(gp, _Gidle, _Gdead)
 	gp.m = mp
 	mp.curg = gp
@@ -1820,7 +1820,7 @@ var extraMWaiters uint32
 // The caller must unlock the list by storing a new list head
 // to extram. If nilokay is true, then lockextra will
 // return a nil list head if that's what it finds. If nilokay is false,
-// lockextra will keep waiting until the list head is no longer nil.
+// lockextra will keep waiting util the list head is no longer nil.
 //go:nosplit
 func lockextra(nilokay bool) *m {
 	const locked = 1
@@ -1994,7 +1994,7 @@ func templateThread() {
 	}
 }
 
-// Stops execution of the current m until new work is available.
+// Stops execution of the current m util new work is available.
 // Returns with acquired P.
 func stopm() {
 	_g_ := getg()
@@ -2147,7 +2147,7 @@ func wakep() {
 	startm(nil, true)
 }
 
-// Stops execution of the current m that is locked to a g until the g is runnable again.
+// Stops execution of the current m that is locked to a g util the g is runnable again.
 // Returns with acquired P.
 func stoplockedm() {
 	_g_ := getg()
@@ -2161,7 +2161,7 @@ func stoplockedm() {
 		handoffp(_p_)
 	}
 	incidlelocked(1)
-	// Wait until another thread schedules lockedg again.
+	// Wait util another thread schedules lockedg again.
 	notesleep(&_g_.m.park)
 	noteclear(&_g_.m.park)
 	status := readgstatus(_g_.m.lockedg.ptr())
@@ -2370,7 +2370,7 @@ stop:
 
 	// wasm only:
 	// Check if a goroutine is waiting for a callback from the WebAssembly host.
-	// If yes, pause the execution until a callback was triggered.
+	// If yes, pause the execution util a callback was triggered.
 	if pauseSchedulerUntilCallback() {
 		// A callback was triggered and caused at least one goroutine to wake up.
 		goto top
@@ -2466,7 +2466,7 @@ stop:
 		if _g_.m.spinning {
 			throw("findrunnable: netpoll with spinning")
 		}
-		gp := netpoll(true) // block until new work is available
+		gp := netpoll(true) // block util new work is available
 		atomic.Store64(&sched.lastpoll, uint64(nanotime()))
 		if gp != nil {
 			lock(&sched.lock)
@@ -2610,7 +2610,7 @@ top:
 		}
 	}
 	if gp == nil {
-		gp, inheritTime = findrunnable() // blocks until work is available
+		gp, inheritTime = findrunnable() // blocks util work is available
 	}
 
 	// This thread is going to run a goroutine and is not spinning anymore,
@@ -3067,7 +3067,7 @@ func exitsyscall() {
 	// Scheduler returned, so we're allowed to run now.
 	// Delete the syscallsp information that we left for
 	// the garbage collector during the system call.
-	// Must wait until now because until gosched returns
+	// Must wait util now because util gosched returns
 	// we don't know for sure that the garbage collector
 	// is not running.
 	_g_.syscallsp = 0
@@ -3186,7 +3186,7 @@ func exitsyscall0(gp *g) {
 		execute(gp, false) // Never returns.
 	}
 	if _g_.m.lockedg != 0 {
-		// Wait until another thread schedules gp and so m again.
+		// Wait util another thread schedules gp and so m again.
 		stoplockedm()
 		execute(gp, false) // Never returns.
 	}
@@ -3581,7 +3581,7 @@ func dolockOSThread() {
 // LockOSThread wires the calling goroutine to its current operating system thread.
 // The calling goroutine will always execute in that thread,
 // and no other goroutine will execute in it,
-// until the calling goroutine has made as many calls to
+// util the calling goroutine has made as many calls to
 // UnlockOSThread as to LockOSThread.
 // If the calling goroutine exits without unlocking the thread,
 // the thread will be terminated.
@@ -3642,7 +3642,7 @@ func dounlockOSThread() {
 // thread is suitable for running other goroutines. If the caller made
 // any permanent changes to the state of the thread that would affect
 // other goroutines, it should not call this function and thus leave
-// the goroutine locked to the OS thread until the goroutine (and
+// the goroutine locked to the OS thread util the goroutine (and
 // hence the thread) exits.
 func UnlockOSThread() {
 	_g_ := getg()
@@ -3751,7 +3751,7 @@ func sigprof(pc, sp, lr uintptr, gp *g, mp *m) {
 	// There is one exceptional transition to a system g, not in ordinary execution.
 	// When a signal arrives, the operating system starts the signal handler running
 	// with an updated PC and SP. The g is updated last, at the beginning of the
-	// handler. There are two reasons this is okay. First, until g is updated the
+	// handler. There are two reasons this is okay. First, util g is updated the
 	// g and SP do not match, so the stack bounds check detects the partial transition.
 	// Second, signal handlers currently run with signals disabled, so a profiling
 	// signal cannot arrive during the handler.
@@ -3777,7 +3777,7 @@ func sigprof(pc, sp, lr uintptr, gp *g, mp *m) {
 	//
 	// There is another apparently viable approach, recorded here in case
 	// the "PC within setsSP function" check turns out not to be usable.
-	// It would be possible to delay the update of either g or SP until immediately
+	// It would be possible to delay the update of either g or SP util immediately
 	// before the PC update instruction. Then, because of the stack bounds check,
 	// the only problematic interrupt point is just before that PC update instruction,
 	// and the sigprof handler can detect that instruction and simulate stepping past

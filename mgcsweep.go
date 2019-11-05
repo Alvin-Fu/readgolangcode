@@ -319,7 +319,7 @@ func (s *mspan) sweep(preserve bool) bool {
 	// (return it to heap or mcentral), because allocation code assumes that a
 	// span is already swept if available for allocation.
 	if freeToHeap || nfreed == 0 {
-		// The span must be in our exclusive ownership until we update sweepgen,
+		// The span must be in our exclusive ownership util we update sweepgen,
 		// check for potential races.
 		if s.state != mSpanInUse || s.sweepgen != sweepgen-1 {
 			print("MSpan_Sweep: state=", s.state, " sweepgen=", s.sweepgen, " mheap.sweepgen=", sweepgen, "\n")

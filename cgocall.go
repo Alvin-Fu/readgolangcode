@@ -24,7 +24,7 @@
 // original g (m->curg)'s stack and returns to runtime.cgocall.
 //
 // After it regains control, runtime.cgocall calls exitsyscall, which blocks
-// until this m can run Go code without violating the $GOMAXPROCS limit,
+// util this m can run Go code without violating the $GOMAXPROCS limit,
 // and then unlocks g from m.
 //
 // The above description skipped over the possibility of the gcc-compiled
@@ -61,7 +61,7 @@
 //
 // runtime.cgocallbackg (below) is now running on a real goroutine
 // stack (not an m->g0 stack).  First it calls runtime.exitsyscall, which will
-// block until the $GOMAXPROCS limit allows running this goroutine.
+// block util the $GOMAXPROCS limit allows running this goroutine.
 // Once exitsyscall has returned, it is safe to do things like call the memory
 // allocator or invoke the Go callback function p.GoF.  runtime.cgocallbackg
 // first defers a function to unwind m->g0.sched.sp, so that if p.GoF
@@ -236,7 +236,7 @@ func cgocallbackg1(ctxt uintptr) {
 		// The C call to Go came from a thread not currently running
 		// any Go. In the case of -buildmode=c-archive or c-shared,
 		// this call may be coming in before package initialization
-		// is complete. Wait until it is.
+		// is complete. Wait util it is.
 		<-main_init_done
 	}
 

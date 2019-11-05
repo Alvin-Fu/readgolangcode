@@ -154,7 +154,7 @@ func signal_recv() uint32 {
 	}
 }
 
-// signalWaitUntilIdle waits until the signal delivery mechanism is idle.
+// signalWaitUntilIdle waits util the signal delivery mechanism is idle.
 // This is used to ensure that we do not drop a signal notification due
 // to a race between disabling a signal and receiving a signal.
 // This assumes that signal delivery has already been disabled for
@@ -167,7 +167,7 @@ func signalWaitUntilIdle() {
 	// sig.wanted, it is possible that another thread has received
 	// a signal, has read from sig.wanted, is now updating sig.mask,
 	// and has not yet woken up the processor thread. We need to wait
-	// until all current signal deliveries have completed.
+	// util all current signal deliveries have completed.
 	for atomic.Load(&sig.delivering) != 0 {
 		Gosched()
 	}
