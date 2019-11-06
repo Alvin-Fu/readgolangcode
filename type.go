@@ -364,6 +364,7 @@ type interfacetype struct {
 	mhdr    []imethod
 }
 
+//
 type maptype struct {
 	typ           _type
 	key           *_type
