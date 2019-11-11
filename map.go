@@ -172,9 +172,9 @@ type hiter struct {
 	bptr        *bmap          // current bucket
 	overflow    *[]*bmap       // keeps overflow buckets of hmap.buckets alive
 	oldoverflow *[]*bmap       // keeps overflow buckets of hmap.oldbuckets alive
-	startBucket uintptr        // bucket iteration started at
+	startBucket uintptr        // bucket iteration started at 开始遍历的桶
 	offset      uint8          // intra-bucket offset to start from during iteration (should be big enough to hold bucketCnt-1)
-	wrapped     bool           // already wrapped around from end of bucket array to beginning
+	wrapped     bool           // already wrapped around from end of bucket array to beginning，遍历结束了
 	B           uint8
 	i           uint8
 	bucket      uintptr
@@ -796,16 +796,17 @@ func mapiterinit(t *maptype, h *hmap, it *hiter) {
 	it.B = h.B
 	it.buckets = h.buckets
 	if t.bucket.kind&kindNoPointers != 0 {
+		// 主要的作用是为了使得map在扩容的时候，遍历也不受影响
 		// Allocate the current slice and remember pointers to both current and old.
 		// This preserves all relevant overflow buckets alive even if
-		// the table grows and/or overflow buckets are added to the table
-		// while we are iterating.
+		// the table grows and/or overflow buckets are added to the table while we are iterating.
 		h.createOverflow()
 		it.overflow = h.extra.overflow
 		it.oldoverflow = h.extra.oldoverflow
 	}
 
 	// decide where to start
+	// 决定map从哪里开始，使用的是随机的值
 	r := uintptr(fastrand())
 	if h.B > 31-bucketCntBits {
 		r += uintptr(fastrand()) << 31
@@ -815,13 +816,13 @@ func mapiterinit(t *maptype, h *hmap, it *hiter) {
 
 	// iterator state
 	it.bucket = it.startBucket
-
+	// 记住当前的map有一个iterator了，可以和其他的iterator同时进行
 	// Remember we have an iterator.
 	// Can run concurrently with another mapiterinit().
 	if old := h.flags; old&(iterator|oldIterator) != iterator|oldIterator {
 		atomic.Or8(&h.flags, iterator|oldIterator)
 	}
-
+	// 获取下一个
 	mapiternext(it)
 }
 
@@ -843,17 +844,18 @@ func mapiternext(it *hiter) {
 
 next:
 	if b == nil {
+		// 说明迭代已经结束了
 		if bucket == it.startBucket && it.wrapped {
 			// end of iteration
 			it.key = nil
 			it.value = nil
 			return
 		}
+		// 表示迭代和增长同时发生
 		if h.growing() && it.B == h.B {
 			// Iterator was started in the middle of a grow, and the grow isn't done yet.
-			// If the bucket we're looking at hasn't been filled in yet (i.e. the old
-			// bucket hasn't been evacuated) then we need to iterate through the old
-			// bucket and only return the ones that will be migrated to this bucket.
+			// If the bucket we're looking at hasn't been filled in yet (i.e. the old bucket hasn't been evacuated)
+			// then we need to iterate through the old bucket and only return the ones that will be migrated to this bucket.
 			oldbucket := bucket & it.h.oldbucketmask()
 			b = (*bmap)(add(h.oldbuckets, oldbucket*uintptr(t.bucketsize)))
 			if !evacuated(b) {

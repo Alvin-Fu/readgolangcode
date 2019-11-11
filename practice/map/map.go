@@ -1,21 +1,28 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"math/rand"
+	"time"
+)
 
 func main() {
-	var t = 0
-	var p *int
-
-	p = &t
-	fmt.Println(p)
-	fmt.Println(uint8(1))
-
-	fmt.Println(3 &^ 5)
-	//for i := 0; i < 10; i++ {
-	//	for j := 0; j < 10; j++ {
-	//		continue
-	//	}
-	//	fmt.Println(i)
-	//}
-	//fmt.Println("hello")
+	FloatMap()
+}
+func FloatMap() {
+	fMap := make(map[float64]int)
+	rand.Seed(time.Now().Unix())
+	fArr := make([]float64, 0)
+	count := 10
+	for i := 0; i < count; i++ {
+		fArr = append(fArr, rand.Float64())
+		//time.Sleep(1 * time.Second)
+	}
+	for i := 0; i < count; i++ {
+		fMap[fArr[i]] = i
+		fmt.Println(fMap[fArr[i]], fArr[i])
+	}
+	for i := 0; i < count; i++ {
+		fmt.Println(fMap[fArr[i]], fArr[i])
+	}
 }
