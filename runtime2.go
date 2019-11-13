@@ -335,8 +335,8 @@ type wincallbackcontext struct {
 // The bounds(界限) of the stack are exactly(精确的) [lo, hi),
 // with no implicit(隐藏的) data structures on either side(方面).
 type stack struct {
-	lo uintptr			// 表示低地址
-	hi uintptr			// 表示高地址
+	lo uintptr // 表示低地址
+	hi uintptr // 表示高地址
 }
 
 type g struct {
@@ -650,9 +650,7 @@ type _func struct {
 	nfuncdata int32
 }
 
-// layout of Itab known to compilers
-// allocated in non-garbage-collected memory
-// Needs to be in sync with
+// layout of Itab known to compilers allocated in non-garbage-collected memory Needs to be in sync with
 // ../cmd/compile/internal/gc/reflect.go:/^func.dumptypestructs.
 type itab struct {
 	inter *interfacetype

@@ -273,6 +273,7 @@ func (m *Map) Delete(key interface{}) {
 	read, _ := m.read.Load().(readOnly)
 	e, ok := read.m[key]
 	// 如果read里面没有，就看这个值是不是在dirty中
+	// 对read中的数据操作是不需要加锁的
 	if !ok && read.amended {
 		m.mu.Lock()
 		read, _ = m.read.Load().(readOnly)
@@ -302,12 +303,12 @@ func (e *entry) delete() (hadValue bool) {
 // Range calls f sequentially for each key and value present in the map.
 // If f returns false, range stops the iteration.
 //
-// Range does not necessarily correspond to any consistent snapshot of the Map's contents: no key will be visited more than once,
-// but if the value for any key is stored or deleted concurrently,
+// Range does not necessarily correspond to any consistent snapshot of the Map's contents:
+// no key will be visited more than once, but if the value for any key is stored or deleted concurrently,
 // Range may reflect any mapping for that key from any point during the Range call.
 //
 // Range may be O(N) with the number of elements in the map even if f returns false after a constant number of calls.
-func (m *Map) Range(f func(key, value interface{}) bool) {
+func (m *Map) Range(function func(key, value interface{}) bool) {
 	// We need to be able to iterate over all of the keys that were already
 	// present at the start of the call to Range.
 	// If read.amended is false, then read.m satisfies that property without
@@ -334,7 +335,7 @@ func (m *Map) Range(f func(key, value interface{}) bool) {
 		if !ok {
 			continue
 		}
-		if !f(k, v) {
+		if !function(k, v) {
 			break
 		}
 	}

@@ -5,8 +5,8 @@
 package runtime
 
 import (
-	"runtime/internal/atomic"
-	"runtime/internal/sys"
+	"readruntime/internal/atomic"
+	"readruntime/internal/sys"
 	"unsafe"
 )
 
@@ -44,34 +44,35 @@ func getitab(inter *interfacetype, typ *_type, canfail bool) *itab {
 		panic(&TypeAssertionError{nil, typ, &inter.typ, name.name()})
 	}
 
-	var m *itab
+	var mItab *itab
 
 	// First, look in the existing table to see if we can find the itab we need.
 	// This is by far the most common case, so do it without locks.
 	// Use atomic to ensure we see any previous writes done by the thread
 	// that updates the itabTable field (with atomic.Storep in itabAdd).
 	t := (*itabTableType)(atomic.Loadp(unsafe.Pointer(&itabTable)))
-	if m = t.find(inter, typ); m != nil {
+	if mItab = t.find(inter, typ); mItab != nil {
 		goto finish
 	}
 
 	// Not found.  Grab the lock and try again.
 	lock(&itabLock)
-	if m = itabTable.find(inter, typ); m != nil {
+	if mItab = itabTable.find(inter, typ); mItab != nil {
 		unlock(&itabLock)
 		goto finish
 	}
 
 	// Entry doesn't exist yet. Make a new entry & add it.
-	m = (*itab)(persistentalloc(unsafe.Sizeof(itab{})+uintptr(len(inter.mhdr)-1)*sys.PtrSize, 0, &memstats.other_sys))
-	m.inter = inter
-	m._type = typ
-	m.init()
-	itabAdd(m)
+	// 没有找到的时候就重新分配，并且将分配的加入到itab的列表中
+	mItab = (*itab)(persistentalloc(unsafe.Sizeof(itab{})+uintptr(len(inter.mhdr)-1)*sys.PtrSize, 0, &memstats.other_sys))
+	mItab.inter = inter
+	mItab._type = typ
+	mItab.init()
+	itabAdd(mItab)
 	unlock(&itabLock)
 finish:
-	if m.fun[0] != 0 {
-		return m
+	if mItab.fun[0] != 0 {
+		return mItab
 	}
 	if canfail {
 		return nil
@@ -82,7 +83,7 @@ finish:
 	// The cached result doesn't record which
 	// interface function was missing, so initialize
 	// the itab again to get the missing function name.
-	panic(&TypeAssertionError{concrete: typ, asserted: &inter.typ, missingMethod: m.init()})
+	panic(&TypeAssertionError{concrete: typ, asserted: &inter.typ, missingMethod: mItab.init()})
 }
 
 // find finds the given interface/type pair in t.
@@ -115,13 +116,13 @@ func (t *itabTableType) find(inter *interfacetype, typ *_type) *itab {
 func itabAdd(m *itab) {
 	// Bugs can lead to calling this while mallocing is set,
 	// typically because this is called while panicing.
-	// Crash reliably, rather than only when we need to grow
-	// the hash table.
+	// Crash reliably, rather than only when we need to grow the hash table.
 	if getg().m.mallocing != 0 {
 		throw("malloc deadlock")
 	}
 
 	t := itabTable
+	// 对hash table进行扩容
 	if t.count >= 3*(t.size/4) { // 75% load factor
 		// Grow hash table.
 		// t2 = new(itabTableType) + some additional entries
@@ -131,9 +132,8 @@ func itabAdd(m *itab) {
 		t2.size = t.size * 2
 
 		// Copy over entries.
-		// Note: while copying, other threads may look for an itab and
-		// fail to find it. That's ok, they will then try to get the itab lock
-		// and as a consequence wait util this copying is complete.
+		// Note: while copying, other threads may look for an itab and fail to find it.
+		// That's ok, they will then try to get the itab lock and as a consequence wait util this copying is complete.
 		iterate_itabs(t2.add)
 		if t2.count != t.count {
 			throw("mismatched count during itab table copy")

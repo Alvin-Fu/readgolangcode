@@ -47,6 +47,7 @@ func Xchguintptr(ptr *uintptr, new uintptr) uintptr
 //go:noescape
 func And8(ptr *uint8, val uint8)
 
+// 原子的或操作
 //go:noescape
 func Or8(ptr *uint8, val uint8)
 

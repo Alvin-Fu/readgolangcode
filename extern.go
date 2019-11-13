@@ -3,9 +3,10 @@
 // license that can be found in the LICENSE file.
 
 /*
-Package runtime contains operations that interact with Go's runtime system,
-such as functions to control goroutines. It also includes the low-level type information
-used by the reflect package; see reflect's documentation for the programmable
+Package runtime contains operations that interact with Go's runtime system such as functions to control goroutines.
+runtime这个包包含了与go运行时系统交互的操作，例如goroutines的控制方法
+It also includes the low-level type informationused by the reflect package;
+see reflect's documentation for the programmable
 interface to the run-time type system.
 
 Environment Variables
@@ -163,7 +164,7 @@ of the run-time system.
 */
 package runtime
 
-import "runtime/internal/sys"
+import "readruntime/internal/sys"
 
 // Caller reports file and line number information about function invocations on
 // the calling goroutine's stack. The argument skip is the number of stack frames
