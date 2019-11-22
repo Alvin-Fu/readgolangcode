@@ -140,11 +140,13 @@ type funcval struct {
 	// variable-size, fn-specific data here
 }
 
+// 表示包含method的interface结构
 type iface struct {
 	tab  *itab
 	data unsafe.Pointer
 }
 
+// 表示不包含method的interface结构
 type eface struct {
 	_type *_type
 	data  unsafe.Pointer
@@ -657,7 +659,8 @@ type itab struct {
 	_type *_type
 	hash  uint32 // copy of _type.hash. Used for type switches.
 	_     [4]byte
-	fun   [1]uintptr // variable sized. fun[0]==0 means _type does not implement inter.
+	// 用于存放interface的method, 这个保存的是方法集的第一个方法的指针，通过指针的偏移可以找到其他的方法
+	fun [1]uintptr // variable sized. fun[0]==0 means _type does not implement inter.
 }
 
 // Lock-free stack node.

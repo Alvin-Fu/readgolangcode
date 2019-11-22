@@ -75,12 +75,13 @@ const (
 	// Must fit in a uint8.
 	// Fast versions cannot handle big values - the cutoff size for
 	// fast versions in cmd/compile/internal/gc/walk.go must be at most this value.
+	// 可以内联的最大大小
 	maxKeySize   = 128
 	maxValueSize = 128
 
-	// data offset should be the size of the bmap struct, but needs to be
-	// aligned correctly. For amd64p32 this means 64-bit alignment
-	// even though pointers are 32 bit.
+	// data offset should be the size of the bmap struct, but needs to be aligned correctly.
+	// For amd64p32 this means 64-bit alignment even though pointers are 32 bit.
+	// 用于数据对齐
 	dataOffset = unsafe.Offsetof(struct {
 		b bmap
 		v int64
@@ -229,26 +230,25 @@ func (b *bmap) keys() unsafe.Pointer {
 // See also tooManyOverflowBuckets.
 // To keep hmap small, noverflow is a uint16.
 // When there are few buckets, noverflow is an exact count.
+// 桶的数量少时，溢出是精确的数量，负责是一个大概的数字
 // When there are many buckets, noverflow is an approximate count.
 func (h *hmap) incrnoverflow() {
-	// We trigger same-size map growth if there are
-	// as many overflow buckets as buckets.
+	// We trigger same-size map growth if there are as many overflow buckets as buckets.
 	// We need to be able to count to 1<<h.B.
 	if h.B < 16 {
 		h.noverflow++
 		return
 	}
 	// Increment with probability 1/(1<<(h.B-15)).
-	// When we reach 1<<15 - 1, we will have approximately
-	// as many overflow buckets as buckets.
+	// When we reach 1<<15 - 1, we will have approximately as many overflow buckets as buckets.
 	mask := uint32(1)<<(h.B-15) - 1
-	// Example: if h.B == 18, then mask == 7,
-	// and fastrand & 7 == 0 with probability 1/8.
+	// Example: if h.B == 18, then mask == 7, and fastrand & 7 == 0 with probability 1/8.
 	if fastrand()&mask == 0 {
 		h.noverflow++
 	}
 }
 
+// 分配一个新的桶
 func (h *hmap) newoverflow(t *maptype, b *bmap) *bmap {
 	var ovf *bmap
 	if h.extra != nil && h.extra.nextOverflow != nil {
@@ -1162,6 +1162,7 @@ func evacuate(t *maptype, h *hmap, oldbucket uintptr) {
 					// 获取新的hash值
 					hash := t.key.alg.hash(k2, uintptr(h.hash0))
 					// 如果相同的key每次算出的hash的值不同， 只有在float类型key时存在
+					// 这个里面说的float类型是IEEE 754这个
 					if h.flags&iterator != 0 && !t.reflexivekey && !t.key.alg.equal(k2, k2) {
 						// If key != key (NaNs), then the hash could be (and probably will be) entirely different from the old hash.
 						// 如果在获取key的hash的时候，出现了相同的key计算出不同的hash

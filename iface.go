@@ -55,6 +55,7 @@ func getitab(inter *interfacetype, typ *_type, canfail bool) *itab {
 		goto finish
 	}
 
+	// 这块的操作
 	// Not found.  Grab the lock and try again.
 	lock(&itabLock)
 	if mItab = itabTable.find(inter, typ); mItab != nil {
@@ -155,6 +156,7 @@ func (t *itabTableType) add(m *itab) {
 	mask := t.size - 1
 	h := itabHashFunc(m.inter, m._type) & mask
 	for i := uintptr(1); ; i++ {
+		// 方法集
 		p := (**itab)(add(unsafe.Pointer(&t.entries), h*sys.PtrSize))
 		m2 := *p
 		if m2 == m {
@@ -187,12 +189,12 @@ func (m *itab) init() string {
 	typ := m._type
 	x := typ.uncommon()
 
-	// both inter and typ have method sorted by name,
-	// and interface names are unique,
+	// both inter and typ have method sorted by name, and interface names are unique,
 	// so can iterate over both in lock step;
 	// the loop is O(ni+nt) not O(ni*nt).
 	ni := len(inter.mhdr)
 	nt := int(x.mcount)
+	//[:nt:nt]这个写法的意义是什么
 	xmhdr := (*[1 << 16]method)(add(unsafe.Pointer(x), uintptr(x.moff)))[:nt:nt]
 	j := 0
 imethods:
@@ -216,6 +218,7 @@ imethods:
 				if tname.isExported() || pkgPath == ipkg {
 					if m != nil {
 						ifn := typ.textOff(t.ifn)
+						//将方法集的指针串起来，内部只保持第一个方法的头指针
 						*(*unsafe.Pointer)(add(unsafe.Pointer(&m.fun[0]), uintptr(k)*sys.PtrSize)) = ifn
 					}
 					continue imethods
@@ -316,6 +319,7 @@ func convT2E32(t *_type, val uint32) (e eface) {
 	return
 }
 
+// 将uint64类型的数据转换为eface  eface(不带method的interface)
 func convT2E64(t *_type, val uint64) (e eface) {
 	var x unsafe.Pointer
 	if val == 0 {

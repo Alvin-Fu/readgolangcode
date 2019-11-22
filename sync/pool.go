@@ -5,14 +5,13 @@
 package sync
 
 import (
-	"internal/race"
 	"runtime"
+	"runtime/race"
 	"sync/atomic"
 	"unsafe"
 )
 
-// A Pool is a set of temporary objects that may be individually saved and
-// retrieved.
+// A Pool is a set of temporary objects that may be individually saved and retrieved.
 //
 // Any item stored in the Pool may be removed automatically at any time without
 // notification. If the Pool holds the only reference when this happens, the
