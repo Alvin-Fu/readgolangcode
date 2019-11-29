@@ -5,6 +5,7 @@
 package runtime
 
 import (
+	"golang.org/x/sys/cpu"
 	"readruntime/internal/atomic"
 	"readruntime/internal/sys"
 	"unsafe"
