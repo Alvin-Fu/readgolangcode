@@ -5,7 +5,7 @@
 package runtime
 
 import (
-	"internal/bytealg"
+	"readruntime/internal/bytealg"
 	"unsafe"
 )
 
@@ -17,9 +17,8 @@ type tmpBuf [tmpStringBufSize]byte
 
 // concatstrings implements a Go string concatenation x+y+z+...
 // The operands are passed in the slice a.
-// If buf != nil, the compiler has determined that the result does not
-// escape the calling function, so the string data can be stored in buf
-// if small enough.
+// If buf != nil, the compiler has determined that the result does not escape the calling function,
+// so the string data can be stored in buf if small enough.
 func concatstrings(buf *tmpBuf, a []string) string {
 	idx := 0
 	l := 0

@@ -361,7 +361,7 @@ func mallocinit() {
 	}
 
 	testdefersizes()
-
+	// 检查大小要是2的次方
 	if heapArenaBitmapBytes&(heapArenaBitmapBytes-1) != 0 {
 		// heapBits expects modular arithmetic on bitmap addresses to work.
 		throw("heapArenaBitmapBytes not a power of 2")
@@ -378,6 +378,7 @@ func mallocinit() {
 		// 表示系统初始化失败，未能获取到物理页的大小
 		throw("failed to get system page size")
 	}
+	// 检查物理页的大小是否合法
 	if physPageSize < minPhysPageSize {
 		// 检查和最小物理页的关系
 		print("system page size (", physPageSize, ") is smaller than minimum page size (", minPhysPageSize, ")\n")
