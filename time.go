@@ -15,36 +15,36 @@ import (
 // If this struct changes, adjust ../time/sleep.go:/runtimeTimer.
 // For GOOS=nacl, package syscall knows the layout of this structure.
 // If this struct changes, adjust ../syscall/net_nacl.go:/runtimeTimer.
+// 定时器的结构体
 type timer struct {
-	tb *timersBucket // the bucket the timer lives in
-	i  int           // heap index
+	tb *timersBucket // the bucket the timer lives in  定时器桶
+	i  int           // heap index  堆的索引
 
 	// Timer wakes up at when, and then at when+period, ... (period > 0 only)
 	// each time calling f(arg, now) in the timer goroutine, so f must be
 	// a well-behaved function and not block.
-	when   int64
-	period int64
-	f      func(interface{}, uintptr)
+	when   int64                      // 表示当前的时间
+	period int64                      // 表示周期时间
+	f      func(interface{}, uintptr) // 回调方法
 	arg    interface{}
 	seq    uintptr
 }
 
 // timersLen is the length of timers array.
 //
-// Ideally, this would be set to GOMAXPROCS, but that would require
-// dynamic reallocation
+// Ideally(理想), this would be set to GOMAXPROCS(P的数量), but that would require
+// dynamic reallocation 理想和实际的使用是有区别的
 //
-// The current value is a compromise between memory usage and performance
+// The current value is a compromise(折中，妥协) between memory usage and performance(性能)
 // that should cover the majority of GOMAXPROCS values used in the wild.
 const timersLen = 64
 
 // timers contains "per-P" timer heaps.
 //
-// Timers are queued into timersBucket associated with the current P,
-// so each P may work with its own timers independently of other P instances.
+// Timers are queued(排队) into timersBucket associated(关联) with the current(当前) P,
+// so each P may work with its own timers independently(独立得) of other P instances(实例).
 //
-// Each timersBucket may be associated with multiple P
-// if GOMAXPROCS > timersLen.
+// Each timersBucket may be associated with multiple(多个，多种) P if GOMAXPROCS > timersLen.
 var timers [timersLen]struct {
 	timersBucket
 
@@ -53,7 +53,9 @@ var timers [timersLen]struct {
 	pad [sys.CacheLineSize - unsafe.Sizeof(timersBucket{})%sys.CacheLineSize]byte
 }
 
+// 分配桶
 func (t *timer) assignBucket() *timersBucket {
+	// 获取当前g得m，p得id
 	id := uint8(getg().m.p.ptr().id) % timersLen
 	t.tb = &timers[id].timersBucket
 	return t.tb
@@ -63,23 +65,25 @@ func (t *timer) assignBucket() *timersBucket {
 type timersBucket struct {
 	lock         mutex
 	gp           *g
-	created      bool
-	sleeping     bool
+	created      bool // 是否创建
+	sleeping     bool // 是否正在由睡眠得
 	rescheduling bool
-	sleepUntil   int64
+	sleepUntil   int64 // 睡眠到什么时候
 	waitnote     note
 	t            []*timer
 }
 
+//
 // nacl fake time support - time in nanoseconds since 1970
 var faketime int64
 
 // Package time APIs.
 // Godoc uses the comments in package time, not these.
 
-// time.now is implemented in assembly.
+// time.now is implemented(应用) in assembly(汇编).
 
 // timeSleep puts the current goroutine to sleep for at least ns nanoseconds.
+// 将当前得goroutine睡眠至少ns纳秒
 //go:linkname timeSleep time.Sleep
 func timeSleep(ns int64) {
 	if ns <= 0 {
@@ -93,6 +97,7 @@ func timeSleep(ns int64) {
 		gp.timer = t
 	}
 	*t = timer{}
+	// 保存再什么时间进行睡眠
 	t.when = nanotime() + ns
 	t.f = goroutineReady
 	t.arg = gp
@@ -106,6 +111,7 @@ func timeSleep(ns int64) {
 }
 
 // startTimer adds t to the timer heap.
+// 将timer添加到定时器堆中
 //go:linkname startTimer time.startTimer
 func startTimer(t *timer) {
 	if raceenabled {
@@ -138,18 +144,21 @@ func addtimer(t *timer) {
 	}
 }
 
-// Add a timer to the heap and start or kick timerproc if the new timer is
-// earlier than any of the others.
+// Add a timer to the heap and start or kick timerproc(回调函数)
+// if the new timer is earlier than any of the others.
 // Timers are locked.
-// Returns whether all is well: false if the data structure is corrupt
-// due to user-level races.
+// Returns whether all is well:
+// false if the data structure is corrupt due to(由于) user-level(用户级得) races(竞争).
+// 正常情况下会返回true，如果由于竞争导致数据被破坏则会返回false
 func (tb *timersBucket) addtimerLocked(t *timer) bool {
-	// when must never be negative; otherwise timerproc will overflow
-	// during its delta calculation and never expire other runtime timers.
+	// when must never be negative(负数); otherwise timerproc will overflow(溢出) during
+	// its delta calculation and never expire(终止) other runtime timers.
 	if t.when < 0 {
 		t.when = 1<<63 - 1
 	}
+	// 保存当前定时器堆中数组得长度
 	t.i = len(tb.t)
+	// 将t加入到堆中
 	tb.t = append(tb.t, t)
 	if !siftupTimer(tb.t, t.i) {
 		return false
@@ -192,6 +201,7 @@ func deltimer(t *timer) bool {
 	// Verify it before proceeding.
 	i := t.i
 	last := len(tb.t) - 1
+	// 判断t是否再堆中，如果再将t删掉
 	if i < 0 || i > last || tb.t[i] != t {
 		unlock(&tb.lock)
 		return false
@@ -352,13 +362,13 @@ func timeSleepUntil() int64 {
 	return next
 }
 
-// Heap maintenance algorithms.
+// Heap maintenance algorithms. 堆得维护算法
 // These algorithms check for slice index errors manually.
-// Slice index error can happen if the program is using racy
-// access to timers. We don't want to panic here, because
-// it will cause the program to crash with a mysterious
-// "panic holding locks" message. Instead, we panic while not
-// holding a lock.
+// 这个算法手动检查由于堆得下标导致得错误
+// Slice index error can happen if the program is using racy access to timers.
+// We don't want to panic here,
+// because it will cause the program to crash with a mysterious(神秘得)
+// "panic holding locks" message. Instead, we panic while not holding a lock.
 // The races can occur despite the bucket locks because assignBucket
 // itself is called without locks, so racy calls can cause a timer to
 // change buckets while executing these functions.
