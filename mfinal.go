@@ -7,8 +7,8 @@
 package runtime
 
 import (
-	"runtime/internal/atomic"
-	"runtime/internal/sys"
+	"readruntime/internal/atomic"
+	"readruntime/internal/sys"
 	"unsafe"
 )
 
@@ -425,8 +425,7 @@ okarg:
 //go:noinline
 
 // KeepAlive marks its argument as currently reachable.
-// This ensures that the object is not freed, and its finalizer is not run,
-// before the point in the program where KeepAlive is called.
+// This ensures that the object is not freed, and its finalizer is not run, before the point in the program where KeepAlive is called.
 //
 // A very simplified example showing where KeepAlive is required:
 // 	type File struct { d int }
@@ -440,9 +439,9 @@ okarg:
 // 	runtime.KeepAlive(p)
 // 	// No more uses of p after this point.
 //
-// Without the KeepAlive call, the finalizer could run at the start of
-// syscall.Read, closing the file descriptor before syscall.Read makes
-// the actual system call.
+// Without the KeepAlive call, the finalizer could run at the start of syscall.Read,
+// closing the file descriptor before syscall.Read makes the actual system call.
+// 将一个临时变量可以保持到调用keepAlive的地方不被回收
 func KeepAlive(x interface{}) {
 	// Introduce a use of x that the compiler can't eliminate.
 	// This makes sure x is alive on entry. We need x to be alive

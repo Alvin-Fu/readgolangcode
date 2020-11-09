@@ -404,8 +404,8 @@ func releaseSudog(s *sudog) {
 }
 
 // funcPC returns the entry PC of the function f.
-// It assumes that f is a func value. Otherwise the behavior is undefined.
-// CAREFUL: In programs with plugins, funcPC can return different values
+// It assumes(假设) that f is a func value. Otherwise the behavior is undefined(未定义).
+// CAREFUL(注意): In programs with plugins, funcPC can return different values
 // for the same function (because there are actually multiple copies of
 // the same function in the address space). To be safe, don't use the
 // results of this function in any == expression. It is only safe to

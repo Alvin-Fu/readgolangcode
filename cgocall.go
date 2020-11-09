@@ -136,12 +136,10 @@ func cgocall(fn, arg unsafe.Pointer) int32 {
 
 	exitsyscall()
 
-	// From the garbage collector's perspective, time can move
-	// backwards in the sequence above. If there's a callback into
-	// Go code, GC will see this function at the call to
-	// asmcgocall. When the Go call later returns to C, the
-	// syscall PC/SP is rolled back and the GC sees this function
-	// back at the call to entersyscall. Normally, fn and arg
+	// From the garbage collector's perspective, time can move backwards in the sequence above.
+	// If there's a callback into Go code, GC will see this function at the call to asmcgocall.
+	// When the Go call later returns to C, the syscall PC/SP is rolled back and the GC sees this function back at the call to entersyscall.
+	// Normally, fn and arg
 	// would be live at entersyscall and dead at asmcgocall, so if
 	// time moved backwards, GC would see these arguments as dead
 	// and then live. Prevent these undead arguments from crashing

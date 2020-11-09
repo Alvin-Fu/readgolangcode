@@ -23,11 +23,10 @@ func MSanWrite(addr unsafe.Pointer, len int) {
 // Private interface for the runtime.
 const msanenabled = true
 
-// If we are running on the system stack, the C program may have
-// marked part of that stack as uninitialized. We don't instrument
-// the runtime, but operations like a slice copy can call msanread
-// anyhow for values on the stack. Just ignore msanread when running
-// on the system stack. The other msan functions are fine.
+// If we are running on the system stack, the C program may have marked part of that stack as uninitialized.
+// We don't instrument the runtime,
+// but operations like a slice copy can call msanread anyhow for values on the stack.
+// Just ignore msanread when running on the system stack. The other msan functions are fine.
 //
 //go:nosplit
 func msanread(addr unsafe.Pointer, sz uintptr) {

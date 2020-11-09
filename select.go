@@ -5,7 +5,7 @@
 package runtime
 
 // This file contains the implementation of Go select statements.
-
+// go中select的实现
 import (
 	"unsafe"
 )
@@ -34,14 +34,17 @@ type scase struct {
 }
 
 var (
+	// 返回通道发送函数的地址
 	chansendpc = funcPC(chansend)
+	// 返回chan接收函数的地址
 	chanrecvpc = funcPC(chanrecv)
 )
 
 func selectsetpc(cas *scase) {
+	// 返回调用者的程序计数器
 	cas.pc = getcallerpc()
 }
-
+// 加锁
 func sellock(scases []scase, lockorder []uint16) {
 	var c *hchan
 	for _, o := range lockorder {
@@ -52,21 +55,24 @@ func sellock(scases []scase, lockorder []uint16) {
 		}
 	}
 }
-
+// 解锁
 func selunlock(scases []scase, lockorder []uint16) {
-	// We must be very careful here to not touch sel after we have unlocked
-	// the last lock, because sel can be freed right after the last unlock.
-	// Consider the following situation.
+	// We must be very careful here to not touch sel after we have unlocked the last lock,
+	// because sel can be freed(释放) right after the last unlock.
+	// Consider(考虑) the following(下列) situation(情况).
 	// First M calls runtime·park() in runtime·selectgo() passing the sel.
 	// Once runtime·park() has unlocked the last lock, another M makes
-	// the G that calls select runnable again and schedules it for execution.
+	// the G that calls select runnable again and schedules it for execution(执行).
 	// When the G runs on another M, it locks all the locks and frees sel.
-	// Now if the first M touches sel, it will access freed memory.
+	// Now if the first M touches sel, it will access(访问) freed memory.
+	// 这个减一的原因是为了防止在goroutine调度的时候，如果前一个M将锁解开了，到另一个M去运行的时候会将select给释放掉，
+	// 释放最后一把锁的将sel也释放掉
 	for i := len(scases) - 1; i >= 0; i-- {
 		c := scases[lockorder[i]].c
 		if c == nil {
 			break
 		}
+		// 这是什么意思
 		if i > 0 && c == scases[lockorder[i-1]].c {
 			continue // will unlock it on the next iteration
 		}
@@ -126,6 +132,7 @@ func selectgo(cas0 *scase, order0 *uint16, ncases int) (int, bool) {
 
 	// Replace send/receive cases involving nil channels with
 	// caseNil so logic below can assume non-nil channel.
+	// 替换被关掉的channel
 	for i := range scases {
 		cas := &scases[i]
 		if cas.c == nil && cas.kind != caseDefault {
@@ -149,18 +156,19 @@ func selectgo(cas0 *scase, order0 *uint16, ncases int) (int, bool) {
 	// cases correctly, and they are rare enough not to bother
 	// optimizing (and needing to test).
 
-	// generate permuted order
+	// generate permuted order， 生成随机顺序
 	for i := 1; i < ncases; i++ {
 		j := fastrandn(uint32(i + 1))
 		pollorder[i] = pollorder[j]
 		pollorder[j] = uint16(i)
 	}
 
-	// sort the cases by Hchan address to get the locking order.
-	// simple heap sort, to guarantee n log n time and constant stack footprint.
+	// sort the cases by Hchan address to get the locking order(顺序).
+	// simple heap sort(堆排), to guarantee n log n time and constant stack footprint.
+	//
 	for i := 0; i < ncases; i++ {
 		j := i
-		// Start with the pollorder to permute cases on the same channel.
+		// Start with the pollorder to permute(重新排列) cases on the same channel.
 		c := scases[pollorder[i]].c
 		for j > 0 && scases[lockorder[(j-1)/2]].c.sortkey() < c.sortkey() {
 			k := (j - 1) / 2
@@ -493,8 +501,7 @@ sclose:
 }
 
 func (c *hchan) sortkey() uintptr {
-	// TODO(khr): if we have a moving garbage collector, we'll need to
-	// change this function.
+	// TODO(khr): if we have a moving garbage collector, we'll need to change this function.
 	return uintptr(unsafe.Pointer(c))
 }
 

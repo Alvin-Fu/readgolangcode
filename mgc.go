@@ -1738,7 +1738,7 @@ func gcBgMarkPrepare() {
 	work.nproc = ^uint32(0)
 	work.nwait = ^uint32(0)
 }
-
+// 后天的标记任务执行函数
 func gcBgMarkWorker(_p_ *p) {
 	gp := getg()
 
@@ -1746,9 +1746,8 @@ func gcBgMarkWorker(_p_ *p) {
 		m      muintptr // Release this m on park.
 		attach puintptr // If non-nil, attach to this p on park.
 	}
-	// We pass park to a gopark unlock function, so it can't be on
-	// the stack (see gopark). Prevent deadlock from recursively
-	// starting GC by disabling preemption.
+	// We pass park to a gopark unlock function, so it can't be on the stack (see gopark).
+	// Prevent deadlock from recursively starting GC by disabling preemption.
 	gp.m.preemptoff = "GC worker init"
 	park := new(parkInfo)
 	gp.m.preemptoff = ""
